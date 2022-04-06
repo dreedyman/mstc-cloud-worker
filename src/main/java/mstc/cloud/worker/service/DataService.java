@@ -65,6 +65,7 @@ public class DataService {
     }
 
     public List<RequestItem> upload(String bucket, File... files) throws Exception {
+        bucket(bucket);
         List<RequestItem> items = new ArrayList<>();
         for (File file : files) {
             minioClient.uploadObject(UploadObjectArgs.builder()
