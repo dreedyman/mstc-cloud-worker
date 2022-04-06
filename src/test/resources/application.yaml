@@ -1,0 +1,25 @@
+spring:
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    exchange: mstc.exchange
+    routingKey: mstc.routingKey
+    queue:
+      response: mstc.queue.response
+      work: mstc.queue.work
+
+minio:
+  host: localhost
+  port: 9000
+  user: mstc
+  password: shmystic
+  bucket: test-bucket
+
+logging:
+  level:
+    org:
+      springframework: WARN
+
+    mstc: DEBUG

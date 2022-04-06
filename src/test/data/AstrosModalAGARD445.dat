@@ -1,0 +1,33 @@
+ASSIGN DATABASE CAPS PASS NEW
+SOLUTION
+TITLE = AstrosModalAGARD445
+ANALYZE
+ BOUNDARY SPC = 2 , METHOD = 1 
+    LABEL = EigenAnalysis
+    MODES
+    PRINT (MODES=ALL) DISP=ALL, ROOT=ALL
+END
+$
+BEGIN BULK(SORT)
+$---1---|---2---|---3---|---4---|---5---|---6---|---7---|---8---|---9---|---10--|
+EIGR           1    MGIV     0.1    200.       1       2                +0      
++0          MASS
+$
+$ Constraint(s)
+SPC1           2  123456      20
+SPC1           2  123456      21
+SPC1           2  123456      22
+SPC1           2  123456      23
+SPC1           2  123456      24
+$
+$ Material(s)
+MAT8           1 457000.  63600.    0.31  63700.   2270.   2270.3.574E-5+0      
++0            0.      0.      0.                                        +1      
++1            0.
+$
+$ Property(ies)
+PSHELL         1       1    0.82       1      1.       10.833333
+$
+INCLUDE AstrosModalAGARD445.bdf
+$
+ENDDATA
