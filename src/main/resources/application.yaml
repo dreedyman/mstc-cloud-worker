@@ -1,18 +1,24 @@
 spring:
   rabbitmq:
-      host: localhost
-      password: guest
-      port: 5672
-      username: guest
-      exchange: mstc.exchange
-      routingKey: mstc.routingKey
-      queue:
-        response: mstc.queue.response
-        work: mstc.queue.work
-      publisher-confirm-type: correlated
-      publisher-returns: true
-      template:
-        mandatory: true
+    host: rabbitmq
+    username: user
+    password: password
+    port: 5672
+    exchange: mstc.exchange
+    routingKey: mstc.routingKey
+    queue:
+      response: mstc.queue.response
+      work: mstc.queue.work
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
+minio:
+  host: localhost
+  port: 9000
+  user: mstc
+  password: fishstick
+  bucket:
 
 logging:
   level:

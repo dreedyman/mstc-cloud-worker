@@ -1,9 +1,9 @@
 spring:
   rabbitmq:
-      host: localhost
-      password: guest
+      host: rabbitmq
+      username: user
+      password: password
       port: 5672
-      username: guest
       exchange: mstc.exchange
       routingKey: mstc.routingKey
       queue:
@@ -14,10 +14,10 @@ spring:
       template:
         mandatory: true
 minio:
-  host: localhost
+  host: minio
   port: 9000
   user: mstc
-  password: shmystic
+  password: fishstick
   bucket:
 
 logging:
