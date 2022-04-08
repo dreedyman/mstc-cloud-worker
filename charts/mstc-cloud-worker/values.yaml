@@ -1,0 +1,23 @@
+# Values for Cloud Worker.
+
+app:
+  replicaCount: 1
+  name: mstc-cloud-worker
+  image:
+    pullPolicy: IfNotPresent
+    tag: 0.0.1
+  ports:
+    rest: 8080
+  nodePorts:
+    rest: 31008
+
+ingress:
+  enabled: false
+  className: ""
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  hosts:
+    - host: mstc-cloud-worker.local
+      paths:
+        - /
+        - /exec
