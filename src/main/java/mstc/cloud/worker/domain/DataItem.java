@@ -18,35 +18,46 @@
 
 package mstc.cloud.worker.domain;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * @author dreedy
  */
 @Data
-//@AllArgsConstructor
 @NoArgsConstructor
-//@Builder
-public class RequestItem {
+public class DataItem {
     private String endpoint;
     private String bucket;
-    private String itemName;
+    private final List<String> itemNames = new ArrayList<>();
 
-    public RequestItem endpoint(String endpoint) {
+    public DataItem(String endpoint, String bucket, String... items) {
+        this.endpoint = endpoint;
+        this.bucket = bucket;
+        this.itemNames.addAll(Arrays.asList(items));
+    }
+
+    public DataItem endpoint(String endpoint) {
         this.endpoint = endpoint;
         return this;
     }
 
-    public RequestItem bucket(String bucket) {
+    public DataItem bucket(String bucket) {
         this.bucket = bucket;
         return this;
     }
 
-    public RequestItem itemName(String itemName) {
-        this.itemName = itemName;
+    public DataItem itemName(String itemName) {
+        this.itemNames.add(itemName);
+        return this;
+    }
+
+    public DataItem itemNames(String... itemNames) {
+        this.itemNames.addAll(Arrays.asList(itemNames));
         return this;
     }
 }

@@ -20,15 +20,16 @@ package mstc.cloud.worker.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import mstc.cloud.worker.domain.DataItem;
 import mstc.cloud.worker.domain.Request;
 import mstc.cloud.worker.domain.Response;
 import mstc.cloud.worker.job.K8sJob;
+import mstc.cloud.worker.job.K8sJobRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 import javax.inject.Inject;
@@ -43,12 +44,12 @@ import java.util.Map;
  */
 @Service
 @SuppressWarnings("unused")
-public class RequestProcessor {
+public class WorkerRequestService {
     @Inject
     private ObjectMapper objectMapper;
     @Autowired
     private RequestSender requestSender;
-    private static final Logger logger = LoggerFactory.getLogger(RequestProcessor.class);
+    private static final Logger logger = LoggerFactory.getLogger(WorkerRequestService.class);
 
     @RabbitListener(queues = "${spring.rabbitmq.queue.work}")
     public String receiveMessage(Message message) /*throws Exception*/ {
@@ -56,10 +57,13 @@ public class RequestProcessor {
         try {
             Request request = objectMapper.readValue(body, Request.class);
             if (request.getImage() != null) {
-                logger.info(String.format("Received\nimage: %s\nname: %s\ninputs: %s",
+                logger.info("Received\n" + request);
+                /*logger.info(String.format("Received\nimage: %s\nname: %s\ninputs: %s",
+                                          request.getEndpoint(),
+                                          request.getBucket(),
                                           request.getImage(),
                                           request.getJobName(),
-                                          request.getInputs().toString()));
+                                          request.getItemNames().toString()));*/
             } else {
                 logger.info(String.format("Received BOGUS:\n%s", body));
             }
@@ -74,11 +78,15 @@ public class RequestProcessor {
 
     private String processRequest(Request request) throws JsonProcessingException {
         K8sJob k8sJob = new K8sJob().image(request.getImage()).name("");
-        Map<String, List<String>> results = new HashMap<>();
-        List<String> urls = new ArrayList<>();
-        urls.add("s3://foo");
-        urls.add("s3://bar");
-        results.put(Response.KEY, urls);
+        K8sJobRunner jobRunner = new K8sJobRunner();
+        String output = jobRunner.submit(k8sJob, K8sJob.TIMEOUT_MINS);
+
+        Map<String, List<DataItem>> results = new HashMap<>();
+        List<DataItem> items = new ArrayList<>();
+        String bucket = request.getBucket();
+        String endpoint = request.getEndpoint();
+        items.add(new DataItem().endpoint(endpoint).bucket(bucket).itemNames("foo", "bar"));
+        results.put(Response.KEY, items);
         return objectMapper.writeValueAsString(new Response(results));
     }
 

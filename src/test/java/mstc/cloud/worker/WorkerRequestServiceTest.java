@@ -21,7 +21,7 @@ package mstc.cloud.worker;
 import io.minio.*;
 import io.minio.messages.Item;
 import mstc.cloud.worker.domain.Request;
-import mstc.cloud.worker.domain.RequestItem;
+import mstc.cloud.worker.domain.DataItem;
 import mstc.cloud.worker.service.DataService;
 import mstc.cloud.worker.service.ResponseConsumer;
 import mstc.cloud.worker.service.RequestSender;
@@ -35,10 +35,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
@@ -50,7 +48,7 @@ import static org.junit.Assert.assertNotNull;
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest
-public class RequestProcessorTest {
+public class WorkerRequestServiceTest {
     @Value("${minio.host}")
     private String host;
     @Value("${minio.port}")
@@ -69,8 +67,7 @@ public class RequestProcessorTest {
     private AmqpAdmin amqpAdmin;
     @Autowired
     private RabbitTemplate rabbitTemplate;
-    private List<URL> inputUrlsX;
-    private List<RequestItem> inputItems;
+    private List<String> inputItems;
     private String endpoint;
     private DataService dataService;
 
@@ -86,10 +83,14 @@ public class RequestProcessorTest {
 
     @After
     public void cleanup() throws Exception {
-        Iterable<Result<Item>> results = dataService.getMinioClient().listObjects(ListObjectsArgs.builder().bucket(bucket).build());
-        for (Result<Item> result : results) {
-            Item item = result.get();
-            dataService.getMinioClient().removeObject(RemoveObjectArgs.builder().bucket(bucket).object(item.objectName()).build());
+        if (dataService.getMinioClient().bucketExists(BucketExistsArgs.builder().bucket(bucket).build())) {
+            Iterable<Result<Item>> results = dataService.getMinioClient()
+                                                        .listObjects(ListObjectsArgs.builder().bucket(bucket).build());
+            for (Result<Item> result : results) {
+                Item item = result.get();
+                dataService.getMinioClient()
+                           .removeObject(RemoveObjectArgs.builder().bucket(bucket).object(item.objectName()).build());
+            }
         }
         //dataService.getMinioClient().removeBucket(RemoveBucketArgs.builder().bucket(bucket).build());
     }
@@ -97,7 +98,11 @@ public class RequestProcessorTest {
     @Test
     public void testWorker() throws Exception {
         assertNotNull("Expected sender, not injected", requestSender);
-        Request request = new Request("mstc/astros-eap-12.5:0.2.0", "astros", inputItems);
+        Request request = new Request("mstc/astros-eap-12.5:0.2.0",
+                                      "astros",
+                                      dataService.getEndpoint(),
+                                      bucket,
+                                      inputItems.toArray(new String[0]));
         requestSender.sendAndReceive(request);
         //TestReceiver receiver = new TestReceiver();
     }
