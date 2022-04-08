@@ -19,6 +19,7 @@ import org.yaml.snakeyaml.Yaml
 plugins {
     id 'org.springframework.boot' version '2.6.4'
     id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+    id "com.palantir.docker" version "0.32.0"
     id 'java'
 }
 
@@ -62,6 +63,12 @@ bootRun {
     sourceResources sourceSets.main
     systemProperty 'spring.profiles.active', System.getProperty('spring.profiles.active') ?: 'local'
     systemProperty 'user.timezone', System.getProperty('user.timezone') ?: 'UTC'
+}
+
+docker {
+    name "mstc/${project.name}:${project.version}"
+    files bootJar.archiveFile
+    buildArgs(['JAR_FILE': "${bootJar.archiveFileName.get()}"])
 }
 
 def composeOut(String action) {
