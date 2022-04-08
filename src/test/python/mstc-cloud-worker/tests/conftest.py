@@ -38,7 +38,7 @@ def inputs():
     data_dir = os.path.join(os.path.dirname(src_dir), "test", "data")
     files = []
     for file in os.listdir(data_dir):
-        files.append(data_dir + "/" + file)        
+        files.append(file)        
     return files
 
 

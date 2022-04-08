@@ -25,11 +25,8 @@ class Client:
 
     def send(self, data):
         self.response = None
-        #data = { "image":"mstc/astros-eap-12.5:0.2.0",
-        #         "inputs":["s3://tenbar/input1.txt","s3://tenbar/input2.txt"],
-        #         "createdTimestamp":"2022-03-29T18:06:53.477Z"
-        #}
         message = json.dumps(data)
+        print("===> " + str(message))
         self._corr_id = str(uuid.uuid4())
         # Send data
         self._channel.basic_publish(exchange=self._exchange, 

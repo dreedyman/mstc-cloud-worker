@@ -20,7 +20,7 @@ class Data:
     
     @property
     def endpoint(self):
-        return f"{self._host}:{self._port}"
+        return f"http://{self._host}:{self._port}"
         
     def upload(self, bucket, files):
         import os
@@ -32,6 +32,6 @@ class Data:
             self.client.fput_object(bucket, name, file)
             #url = self._client.presigned_get_object(bucket, name)
             #urls.append(url)
-            item = {"endpoint": f"{self._host}:{self._port}", "bucket": bucket, "itemName": name}
-            items.append(item)
+            #item = {"endpoint": f"{self._host}:{self._port}", "bucket": bucket, "itemName": name}
+            items.append(name)
         return items
