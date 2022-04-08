@@ -19,18 +19,15 @@
 package mstc.cloud.worker.service;
 
 import io.minio.*;
-import io.minio.errors.*;
-import io.minio.http.Method;
 import io.minio.messages.Item;
-import mstc.cloud.worker.domain.RequestItem;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,6 +37,7 @@ import java.util.List;
 public class DataService {
     private final String endpoint;
     private final MinioClient minioClient;
+    private static final Logger LOGGER = LoggerFactory.getLogger(DataService.class);
 
     public DataService(String endpoint,
                        String user,
@@ -61,19 +59,20 @@ public class DataService {
     public void bucket(String bucket) throws Exception {
         if (!minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucket).build())) {
             minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucket).build());
+            LOGGER.info("Created bucket: " + bucket);
         }
     }
 
-    public List<RequestItem> upload(String bucket, File... files) throws Exception {
+    public List<String> upload(String bucket, File... files) throws Exception {
         bucket(bucket);
-        List<RequestItem> items = new ArrayList<>();
+        List<String> items = new ArrayList<>();
         for (File file : files) {
             minioClient.uploadObject(UploadObjectArgs.builder()
                                                      .bucket(bucket)
                                                      .object(file.getName())
                                                      .filename(file.getPath())
                                                      .build());
-            items.add(new RequestItem().endpoint(endpoint).bucket(bucket).itemName(file.getName()));
+            items.add(file.getName());
         }
         return items;
     }

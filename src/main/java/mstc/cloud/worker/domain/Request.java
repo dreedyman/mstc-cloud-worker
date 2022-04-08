@@ -20,21 +20,25 @@ package mstc.cloud.worker.domain;
 
 import lombok.*;
 
-import java.util.List;
-
 /**
  * @author dreedy
  */
+@EqualsAndHashCode(callSuper = true)
+@ToString(callSuper = true)
 @Data
 @NoArgsConstructor
-public class Request {
+public class Request extends DataItem {
     private String image;
     private String jobName;
-    private List<RequestItem> inputs;
 
-    public Request(String image, String jobName, List<RequestItem> inputs) {
+    public Request(String image,
+                   String jobName,
+                   String endpoint,
+                   String bucket,
+                   String... inputs) {
+        super(endpoint, bucket, inputs);
         this.image = image;
         this.jobName = jobName;
-        this.inputs = inputs;
     }
+
 }

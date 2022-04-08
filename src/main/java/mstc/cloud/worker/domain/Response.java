@@ -33,5 +33,5 @@ import java.util.Map;
 @NoArgsConstructor
 public class Response {
     public static final String KEY = "results";
-    private Map<String, List<String>> results;
+    private Map<String, List<DataItem>> results;
 }
