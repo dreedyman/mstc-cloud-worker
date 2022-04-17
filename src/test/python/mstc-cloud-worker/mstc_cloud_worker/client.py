@@ -26,7 +26,6 @@ class Client:
     def send(self, data):
         self.response = None
         message = json.dumps(data)
-        print("===> " + str(message))
         self._corr_id = str(uuid.uuid4())
         # Send data
         self._channel.basic_publish(exchange=self._exchange, 
