@@ -51,19 +51,14 @@ public class WorkerRequestService {
     private RequestSender requestSender;
     private static final Logger logger = LoggerFactory.getLogger(WorkerRequestService.class);
 
-    @RabbitListener(queues = "${spring.rabbitmq.queue.work}")
+    //@RabbitListener(queues = "${spring.rabbitmq.queue.work}")
+    @RabbitListener(queues = "#{workQueue.name}")
     public String receiveMessage(Message message) /*throws Exception*/ {
         String body = new String(message.getBody(), StandardCharsets.UTF_8);
         try {
             Request request = objectMapper.readValue(body, Request.class);
             if (request.getImage() != null) {
                 logger.info("Received\n" + request);
-                /*logger.info(String.format("Received\nimage: %s\nname: %s\ninputs: %s",
-                                          request.getEndpoint(),
-                                          request.getBucket(),
-                                          request.getImage(),
-                                          request.getJobName(),
-                                          request.getItemNames().toString()));*/
             } else {
                 logger.info(String.format("Received BOGUS:\n%s", body));
             }
@@ -76,18 +71,21 @@ public class WorkerRequestService {
         return null;
     }
 
-    private String processRequest(Request request) throws JsonProcessingException {
-        K8sJob k8sJob = new K8sJob().image(request.getImage()).name("");
+    public String processRequest(Request request) throws JsonProcessingException {
+        K8sJob k8sJob = new K8sJob()
+                .image(request.getImage())
+                .name(request.getJobName())
+                .command(request.getCommand())
+                .args(request.getArgs());
         K8sJobRunner jobRunner = new K8sJobRunner();
+        logger.info("Submitting job: " + request.getJobName());
         String output = jobRunner.submit(k8sJob, K8sJob.TIMEOUT_MINS);
 
-        Map<String, List<DataItem>> results = new HashMap<>();
         List<DataItem> items = new ArrayList<>();
         String bucket = request.getBucket();
         String endpoint = request.getEndpoint();
         items.add(new DataItem().endpoint(endpoint).bucket(bucket).itemNames("foo", "bar"));
-        results.put(Response.KEY, items);
-        return objectMapper.writeValueAsString(new Response(results));
+        return objectMapper.writeValueAsString(new Response().items(items));
     }
 
 }

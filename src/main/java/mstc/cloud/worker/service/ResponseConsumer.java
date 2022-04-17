@@ -35,10 +35,11 @@ import java.nio.charset.StandardCharsets;
 public class ResponseConsumer {
     private static final Logger logger = LoggerFactory.getLogger(ResponseConsumer.class);
 
-    @RabbitListener(queues = "#{responseQueue.name}")
+    @RabbitListener(queues = "#{workQueue.name}")
     public void receive(Message message) {
         String correlationId = message.getMessageProperties().getCorrelationId();
         String body = new String(message.getBody(), StandardCharsets.UTF_8);
-        logger.info(String.format("Received:\n%s\ncorrelation id: %s", body, correlationId));
+        logger.info(String.format("Received (queue): %s\n%s\ncorrelation id: %s",
+                                  message.getMessageProperties().getConsumerQueue(), body, correlationId));
     }
 }

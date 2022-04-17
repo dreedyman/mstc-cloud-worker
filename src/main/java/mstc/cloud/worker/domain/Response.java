@@ -22,6 +22,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -29,9 +31,11 @@ import java.util.Map;
  * @author dreedy
  */
 @Data
-@AllArgsConstructor
-@NoArgsConstructor
 public class Response {
-    public static final String KEY = "results";
-    private Map<String, List<DataItem>> results;
+    private final List<DataItem> items = new ArrayList<>();
+
+    public Response items(List<DataItem> items) {
+        this.items.addAll(items);
+        return this;
+    }
 }

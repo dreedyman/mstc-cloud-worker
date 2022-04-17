@@ -20,6 +20,9 @@ package mstc.cloud.worker.domain;
 
 import lombok.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * @author dreedy
  */
@@ -30,15 +33,40 @@ import lombok.*;
 public class Request extends DataItem {
     private String image;
     private String jobName;
+    private List<String> args;
+    private List<String> command;
 
     public Request(String image,
                    String jobName,
+                   List<String> command,
+                   List<String> args,
                    String endpoint,
                    String bucket,
                    String... inputs) {
         super(endpoint, bucket, inputs);
         this.image = image;
         this.jobName = jobName;
+        this.command = command;
+        this.args = args;
     }
 
+    public Request image(String image) {
+        this.image = image;
+        return this;
+    }
+
+    public Request jobName(String jobName) {
+        this.jobName = jobName;
+        return this;
+    }
+
+    public Request args(List<String> args) {
+        this.args.addAll(args);
+        return this;
+    }
+
+    public Request command(List<String> command) {
+        this.command.addAll(command);
+        return this;
+    }
 }

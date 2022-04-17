@@ -83,6 +83,7 @@ public class RequestSender {
             return message;
         };
 
-        rabbitTemplate.convertAndSend(exchange, routingKey, requestMessage, messagePostProcessor);
+        //rabbitTemplate.convertAndSend(exchange, routingKey, requestMessage, messagePostProcessor);
+        rabbitTemplate.convertSendAndReceive(exchange, routingKey, requestMessage, messagePostProcessor);
     }
 }
