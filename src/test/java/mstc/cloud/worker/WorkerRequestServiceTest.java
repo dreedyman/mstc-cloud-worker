@@ -37,6 +37,8 @@ import org.springframework.test.context.junit4.SpringRunner;
 import java.io.File;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
@@ -98,8 +100,15 @@ public class WorkerRequestServiceTest {
     @Test
     public void testWorker() throws Exception {
         assertNotNull("Expected sender, not injected", requestSender);
-        Request request = new Request("mstc/astros-eap-12.5:0.2.0",
-                                      "astros",
+        String[] args = new String[]{"-c", "while true; do echo hello; sleep 10;done"};
+        List<String> command = new ArrayList<>();
+        command.add("/bin/sh");
+        //String image = "mstc/astros-eap-12.5:0.2.0";
+        String image = "busybox";
+        Request request = new Request(image,
+                                      "say something",
+                                      command,
+                                      Arrays.asList(args),
                                       dataService.getEndpoint(),
                                       bucket,
                                       inputItems.toArray(new String[0]));

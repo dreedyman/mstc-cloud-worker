@@ -28,6 +28,6 @@ build/
 .idea/
 .gradle/
 
+*.pyc
 __pycache__/
 __pypackages__/
-*.pyc
