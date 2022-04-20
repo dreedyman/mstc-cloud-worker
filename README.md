@@ -1,22 +1,29 @@
 # MSTC Cloud Worker
 This project provides a Worker that consumes work requests from a queue, submits Kubernetes jobs and writes responses back. The worker is written in Java, a test client has been provided with Python in `src/test/python`. This is an embedded project that uses `poetry`.
 
-The `cloud-worker` is a Spring Boot service, and also uses [Fabric8's Java Kubernetes Client](https://github.com/fabric8io/kubernetes-client).
+The `cloud-worker` is a Spring Boot service, and also uses the [Fabric8's Java Kubernetes Client](https://github.com/fabric8io/kubernetes-client).
 
 ## Overview
 ![](assets/arch.png)
 
-Client perform thew following:
+**Client perform the following:**
 
-1. Uploads inputs to MinIO bucket
-2. Submits request to RabbitMQ
+1. Uploads input data to a MinIO `input bucket`
+2. Submits request to RabbitMQ, providing the `image` name, `job name`, `input-bucket`, optional `output-bucket` (if not proivided the `input bucket` will be used to send output(s)).
 
-Cloud-Worker then:
+**Cloud-Worker then:**
 
 1. Consumes work
 2. Unwraps request, obtains the `image` to run, a name for the `job`, an optional `timeout`, the `input bucket URL` and optional `output bucket URL`. 
 3. These values are then configured into a Kubernetes Job. The `input bucket URL` and optional `output bucket URL` are set as values for environment variables `INPUT_BUCKET_URL` and `OUTPUT_BUCKET_URL` respectively.
 4. The Job is submitted and observed. Once complete the output of the Job is provided.
+
+**K8S Job**
+
+1. Is expected to download all files in the `input bucket`
+2. Do it's thing, and
+3. Upload all files to the `output bucket`. Once the client receives notification, it can then go pick up all files. NOTE: If there are errors that the K8s Job runs into, they will be put into files and copied to the `output bucket` as well.
+
 
 ## Setting up Kubernetes
 In order for the `mstc-cloud-worker` to create, monitor and work with Kubernetes jobs, it needs to have a service account. A service account provides an identity for a process that runs in a pod.
