@@ -72,7 +72,7 @@ public class DataService {
                                                      .object(file.getName())
                                                      .filename(file.getPath())
                                                      .build());
-            items.add(file.getName());
+            items.add(endpoint + "/" + bucket + "/" + file.getName());
         }
         return items;
     }

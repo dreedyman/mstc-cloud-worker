@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import lombok.Getter;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.AsyncRabbitTemplate;
 import org.springframework.amqp.rabbit.annotation.RabbitListenerConfigurer;
@@ -54,14 +55,10 @@ public class WorkerConfig implements RabbitListenerConfigurer {
     private String username;
     @Value("${spring.rabbitmq.password}")
     private String password;
-    @Value("${spring.rabbitmq.queue.response}")
-    private String responseQueue;
-    @Value("${spring.rabbitmq.queue.work}")
-    private String workQueue;
-    @Value("${spring.rabbitmq.exchange}")
-    private String exchange;
-    @Value("${spring.rabbitmq.routingKey}")
-    private String routingKey;
+    @Getter
+    private final String exchange = "mstc.exchange";
+    @Getter
+    private final String routingKey = "mstc.routingKey";
 
     @Override
     public void configureRabbitListeners(RabbitListenerEndpointRegistrar registrar) {
@@ -96,11 +93,13 @@ public class WorkerConfig implements RabbitListenerConfigurer {
 
     @Bean
     public Queue responseQueue(){
+        String responseQueue = "mstc.queue.response";
         return QueueBuilder.durable(responseQueue).build();
     }
 
     @Bean
     public Queue workQueue(){
+        String workQueue = "mstc.queue.work";
         return QueueBuilder.durable(workQueue).build();
     }
 

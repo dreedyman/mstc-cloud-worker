@@ -18,13 +18,13 @@
 
 package mstc.cloud.worker;
 
+import io.fabric8.kubernetes.client.server.mock.KubernetesServer;
 import io.minio.*;
 import io.minio.messages.Item;
 import mstc.cloud.worker.domain.Request;
-import mstc.cloud.worker.domain.DataItem;
 import mstc.cloud.worker.service.DataService;
-import mstc.cloud.worker.service.ResponseConsumer;
 import mstc.cloud.worker.service.RequestSender;
+import mstc.cloud.worker.service.WorkerRequestService;
 import org.junit.*;
 import org.junit.runner.RunWith;
 import org.springframework.amqp.core.AmqpAdmin;
@@ -38,7 +38,6 @@ import java.io.File;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
@@ -63,24 +62,30 @@ public class WorkerRequestServiceTest {
     private String bucket;
     @Autowired
     private RequestSender requestSender;
-    @Autowired
-    private ResponseConsumer consumer;
+
     @Autowired
     private AmqpAdmin amqpAdmin;
     @Autowired
     private RabbitTemplate rabbitTemplate;
+    @Autowired
+    private WorkerRequestService workerRequestService;
     private List<String> inputItems;
     private String endpoint;
     private DataService dataService;
+    @Rule
+    public KubernetesServer server = new KubernetesServer(true, true);
 
     @Before
     public  void setup() throws Exception {
         endpoint = String.format("http://%s:%s", host, port);
-        check(new MinIOCheck());
-        check(new RabbitMQCheck());
+        //check(new MinIOCheck());
+        //check(new RabbitMQCheck());
         dataService = new DataService(endpoint, user, password);
         File testFileDir = new File(System.getProperty("test.data.dir"));
-        inputItems = dataService.upload(bucket, testFileDir.listFiles());
+        //inputItems = dataService.upload(bucket, testFileDir.listFiles());
+        inputItems = new ArrayList<>();
+        inputItems.add("foo");
+        inputItems.add("bar");
     }
 
     @After
@@ -97,26 +102,22 @@ public class WorkerRequestServiceTest {
         //dataService.getMinioClient().removeBucket(RemoveBucketArgs.builder().bucket(bucket).build());
     }
 
+
     @Test
     public void testWorker() throws Exception {
         assertNotNull("Expected sender, not injected", requestSender);
-        String[] args = new String[]{"-c", "while true; do echo hello; sleep 10;done"};
-        List<String> command = new ArrayList<>();
-        command.add("/bin/sh");
+        String[] args = new String[]{"/bin/sh", "-c", "date; echo Hello from Kubernetes"};
         //String image = "mstc/astros-eap-12.5:0.2.0";
         String image = "busybox";
         Request request = new Request(image,
                                       "say something",
-                                      command,
-                                      Arrays.asList(args),
-                                      dataService.getEndpoint(),
-                                      bucket,
-                                      inputItems.toArray(new String[0]));
-        requestSender.sendAndReceive(request);
-        //TestReceiver receiver = new TestReceiver();
+                                      5,
+                                      dataService.getEndpoint() +"/" + bucket,
+                                      dataService.getEndpoint() +"/" + bucket);
     }
 
     @Test
+    @Ignore
     public void download() throws Exception {
         File downloadTo = new File(System.getProperty("test.download.dir"));
         downloadTo.mkdirs();

@@ -60,6 +60,7 @@ dependencies {
     testImplementation "com.palantir.docker.compose:docker-compose-rule-junit4:${dockerComposeRule}"
     implementation "io.fabric8:kubernetes-server-mock:${fabric8MockVersion}"
     testAnnotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+    testImplementation "com.squareup.okhttp3:mockwebserver:4.8.0"
 }
 
 bootRun {
@@ -96,14 +97,20 @@ def helmExec(List<String> args) {
 
 task helmInstall() {
     doLast {
-        helmExec(["install", "mstc-cloud-worker", "${project.projectDir.path}/charts/mstc-cloud-worker"])
+        helmExec(["install", "mstc-cloud-worker", "${project.projectDir.path}/charts/mstc-cloud-worker", "-n", "mstc-dev"])
+        helmExec(["install", "mstc-work-queue", "${project.projectDir.path}/charts/rabbitmq", "-n", "mstc-dev"])
     }
 }
 
 task helmUninstall() {
     doLast {
-        helmExec(["uninstall", "mstc-cloud-worker"])
+        helmExec(["uninstall", "mstc-cloud-worker", "-n", "mstc-dev"])
+        helmExec(["uninstall", "mstc-work-queue", "-n", "mstc-dev"])
     }
+}
+
+task helm() {
+    dependsOn(helmUninstall, helmInstall)
 }
 
 clean.dependsOn(helmUninstall)
@@ -128,12 +135,18 @@ task composeDown() {
 }
 
 test {
-    dependsOn composeUp
-    //finalizedBy composeDown
+    //dependsOn composeUp
     environment "MINIO_USERNAME", "mstc"
     environment "MINIO_PASSWORD", "shmystic"
+    environment "WORK_QUEUE_HOST", "localhost"
+    environment "WORK_QUEUE_PORT", "5672"
+    environment "WORK_QUEUE_USER", "guest"
+    environment "WORK_QUEUE_PASS", "guest"
     systemProperty "test.data.dir", "${project.projectDir.path}/src/test/data"
     systemProperty "test.download.dir", "${project.buildDir.path}/download"
+    systemProperty "test.resources.dir", "${project.projectDir.path}/src/test/resources"
 }
 
 
+sourceCompatibility = JavaVersion.VERSION_11
+targetCompatibility = JavaVersion.VERSION_11

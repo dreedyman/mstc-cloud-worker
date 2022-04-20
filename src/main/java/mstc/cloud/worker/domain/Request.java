@@ -21,33 +21,32 @@ package mstc.cloud.worker.domain;
 import lombok.*;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
  * @author dreedy
  */
-@EqualsAndHashCode(callSuper = true)
-@ToString(callSuper = true)
 @Data
 @NoArgsConstructor
-public class Request extends DataItem {
+public class Request {
     private String image;
     private String jobName;
-    private List<String> args;
-    private List<String> command;
+    private int timeOut;
+    private String inputBucketUrl;
+    private String outputBucketUrl;
 
     public Request(String image,
                    String jobName,
-                   List<String> command,
-                   List<String> args,
-                   String endpoint,
-                   String bucket,
-                   String... inputs) {
-        super(endpoint, bucket, inputs);
+                   int timeOut,
+                   String inputBucketUrl,
+                   String outputBucketUrl) {
         this.image = image;
         this.jobName = jobName;
-        this.command = command;
-        this.args = args;
+        this.timeOut = timeOut;
+        this.inputBucketUrl = inputBucketUrl;
+        this.outputBucketUrl = outputBucketUrl;
     }
 
     public Request image(String image) {
@@ -60,13 +59,21 @@ public class Request extends DataItem {
         return this;
     }
 
-    public Request args(List<String> args) {
-        this.args.addAll(args);
+    public Request timeOut(int timeOut) {
+        this.timeOut = timeOut;
         return this;
     }
 
-    public Request command(List<String> command) {
-        this.command.addAll(command);
+    public Request inputBucketUrl(String inputBucketUrl) {
+        this.inputBucketUrl = inputBucketUrl;
         return this;
     }
+
+    public Request outputBucketUrl(String outputBucketUrl) {
+        this.outputBucketUrl = outputBucketUrl;
+        return this;
+    }
+
+
+
 }

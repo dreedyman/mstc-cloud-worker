@@ -1,6 +1,7 @@
 package mstc.cloud.worker.controller;
 
 import mstc.cloud.worker.domain.Request;
+import mstc.cloud.worker.service.WorkerRequestProcessor;
 import mstc.cloud.worker.service.WorkerRequestService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +21,7 @@ import javax.inject.Inject;
 public class WorkerController {
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkerController.class);
     @Inject
-    private WorkerRequestService workerRequestService;
+    private WorkerRequestProcessor workerRequestProcessor;
 
     @RequestMapping(value = "/worker",
             method = RequestMethod.GET,
@@ -41,7 +42,7 @@ public class WorkerController {
         }
         LOGGER.info("Received request to process" + request);
         try {
-            String result =  workerRequestService.processRequest(request);
+            String result =  workerRequestProcessor.processRequest(request);
             return new ResponseEntity<>(result, HttpStatus.OK);
         } catch (Exception e) {
             LOGGER.warn("Error running : " + request.getJobName(), e);

@@ -19,6 +19,7 @@
 package mstc.cloud.worker.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import mstc.cloud.worker.config.WorkerConfig;
 import mstc.cloud.worker.domain.Request;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,11 +39,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Service
 @SuppressWarnings("unused")
 public class RequestSender {
+    @Inject
+    private WorkerConfig workerConfig;
     private final RabbitTemplate rabbitTemplate;
-    @Value("${spring.rabbitmq.exchange}")
+    /*@Value("${spring.rabbitmq.exchange}")
     private String exchange;
     @Value("${spring.rabbitmq.routingKey}")
-    private String routingKey;
+    private String routingKey;*/
     @Autowired
     private Queue responseQueue;
     @Autowired
@@ -64,7 +67,7 @@ public class RequestSender {
                 .setContentType(MessageProperties.CONTENT_TYPE_JSON)
                 .build();
 
-        rabbitTemplate.convertAndSend(exchange, workQueue.getName(), message);
+        rabbitTemplate.convertAndSend(workerConfig.getExchange(), workQueue.getName(), message);
     }
 
     public void sendAndReceive(Request request) throws Exception {
@@ -84,6 +87,7 @@ public class RequestSender {
         };
 
         //rabbitTemplate.convertAndSend(exchange, routingKey, requestMessage, messagePostProcessor);
-        rabbitTemplate.convertSendAndReceive(exchange, routingKey, requestMessage, messagePostProcessor);
+        rabbitTemplate.convertSendAndReceive(workerConfig.exchange().getName(),
+                                             workerConfig.getRoutingKey(), requestMessage, messagePostProcessor);
     }
 }

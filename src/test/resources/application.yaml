@@ -1,14 +1,14 @@
 spring:
   rabbitmq:
-    host: localhost
-    port: 5672
-    username: guest
-    password: guest
-    exchange: mstc.exchange
-    routingKey: mstc.routingKey
-    queue:
-      response: mstc.queue.response
-      work: mstc.queue.work
+    host: ${WORK_QUEUE_HOST}
+    port: ${WORK_QUEUE_PORT}
+    username: ${WORK_QUEUE_USER}
+    password: ${WORK_QUEUE_PASS}
+    #exchange: mstc.exchange
+    #routingKey: mstc.routingKey
+    #queue:
+    #  response: mstc.queue.response
+    #  work: mstc.queue.work
 
 minio:
   host: localhost

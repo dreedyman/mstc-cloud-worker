@@ -1,9 +1,11 @@
 package mstc.cloud.worker.job;
 
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
+import lombok.Builder;
 import lombok.Getter;
 
 import java.util.*;
@@ -11,92 +13,51 @@ import java.util.*;
 /**
  * @author dreedy
  */
-@Getter
+@Builder
 public class K8sJob {
     private String image;
+    @Getter
     private String namespace;
     private String jobName;
-    private final List<String> command = new ArrayList<>();
-    private final List<String> args = new ArrayList<>();
-    private static final int BACKOFF_LIMIT = 2;
-    public static final int TIMEOUT_MINS = 15;
-    private static final int TTL_SECONDS_AFTER_FINISHED = 5;
+    @Getter
+    private int timeOut;
+    private Map<String, String> env;
+    public static final int DEFAULT_TIMEOUT_MINUTES = 15;
 
-    public K8sJob command(List<String> command) {
-        this.command.addAll(command);
-        return this;
+    public String getJobName() {
+        return String.format("%s-%s", jobName, UUID.randomUUID());
     }
 
-    public K8sJob args(List<String> args) {
-        this.args.addAll(args);
-        return this;
-    }
-
-    public K8sJob image(String image) {
-        this.image = image;
-        return this;
-    }
-
-    public K8sJob name(String name) {
-        this.jobName = name.replace(" ", "-");
-        return this;
-    }
-
-    public K8sJob namespace(String namespace) {
-        this.namespace = namespace;
-        return this;
-    }
-
-    public String getImage() {
-        return image;
-    }
-
-    public String getNamespace() {
-        return namespace == null ? "default" : namespace;
+    private List<EnvVar> getEnvVars() {
+        List<EnvVar> envVars = new ArrayList<>();
+        for(Map.Entry<String, String> entry : env.entrySet()) {
+            EnvVar envVar = new EnvVar();
+            envVar.setName(entry.getKey());
+            envVar.setValue(entry.getValue());
+            envVars.add(envVar);
+        }
+        return envVars;
     }
 
     public Job getJob() {
         /*Map<String, Quantity> resourceLimitsMap = new HashMap<>();
         resourceLimitsMap.put("cpu", new Quantity("1000m"));
         resourceLimitsMap.put("memory", new Quantity("1000M"));*/
-        JobBuilder jobBuilder = new JobBuilder()
-                .withApiVersion("batch/v1")
-                .withNewMetadata()
-                .withName(jobName)
-                .endMetadata()
-                .withNewSpec()
-                .withNewTemplate()
-                .withNewSpec()
-                .addNewContainer()
-                .withName(this.jobName)
-                .withImage(this.image)
-                .withCommand(this.command)
-                .withArgs(this.args)
-                .withImagePullPolicy("IfNotPresent")
-                /*.withResources(new ResourceRequirementsBuilder()
-                                       .withLimits(resourceLimitsMap)
-                                       .withRequests(resourceLimitsMap)
-                                       .build())*/
-                .endContainer()
-                .withRestartPolicy("Never")
-                .endSpec()
-                .endTemplate()
-                .endSpec();
-
-
         return new JobBuilder()
                 .withApiVersion("batch/v1")
                 .withNewMetadata()
-                 .withName(jobName)
+                .withName(getJobName())
+                .withLabels(Collections.singletonMap("foo", "bar"))
                 .endMetadata()
                 .withNewSpec()
+                .withTtlSecondsAfterFinished(30)
+                //.withActiveDeadlineSeconds()
                 .withNewTemplate()
                 .withNewSpec()
                 .addNewContainer()
-                .withName(this.jobName)
-                .withImage(this.image)
-                .withArgs(this.args)
-                .withCommand(this.args)
+                .withName(jobName)
+                .withImage(image)
+                .withEnv(getEnvVars())
                 .withImagePullPolicy("IfNotPresent")
                 /*.withResources(new ResourceRequirementsBuilder()
                                        .withLimits(resourceLimitsMap)

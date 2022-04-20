@@ -1,13 +1,10 @@
 package mstc.cloud.worker.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import mstc.cloud.worker.domain.DataItem;
 import mstc.cloud.worker.domain.Request;
-import mstc.cloud.worker.domain.Response;
-import mstc.cloud.worker.job.K8sJob;
-import mstc.cloud.worker.job.K8sJobRunner;
-import mstc.cloud.worker.service.WorkerRequestService;
+import mstc.cloud.worker.service.WorkerRequestProcessor;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -23,10 +20,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import javax.inject.Inject;
-import java.net.URL;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.*;
@@ -37,7 +31,7 @@ import static org.mockito.Mockito.when;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class WorkerControllerTest {
     @Mock
-    private WorkerRequestService workerRequestService;
+    private WorkerRequestProcessor workerRequestProcessor;
     @Autowired
     @InjectMocks
     private WorkerController workerController;
@@ -49,11 +43,10 @@ public class WorkerControllerTest {
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.openMocks(this);
-        List<DataItem> items = new ArrayList<>();
-        items.add(new DataItem().bucket("green").endpoint("http://locahost:9090").itemNames("black", "blue"));
-        Response response = new Response().items(items);
+        Map<String, String> response = new HashMap<>();
+        response.put("result", "Happy path");
         String s = mapper.writeValueAsString(response);
-        when(workerRequestService.processRequest(any(Request.class))).thenReturn(mapper.writeValueAsString(response));
+        when(workerRequestProcessor.processRequest(any(Request.class))).thenReturn(mapper.writeValueAsString(response));
     }
 
     @After
@@ -66,14 +59,13 @@ public class WorkerControllerTest {
 
     @Test
     public void exec() throws JsonProcessingException {
-        Request request = (Request) new Request().endpoint("http://localhost:9000").bucket("red-rover").itemNames("come", "over");
+        Request request = new Request().inputBucketUrl("http://localhost:9000/red-rover/");
         ResponseEntity<String> result = workerController.exec(request);
         assertNotNull("Expected non-null", result);
         assertEquals("Expected 200, got: " + result.getStatusCode(),
                      HttpStatus.OK, result.getStatusCode());
-        Response response = mapper.readValue(result.getBody(), Response.class);
+        Map<String, String> response = mapper.readValue(result.getBody(),new TypeReference<>() {});
         assertNotNull("Expected non-null", response);
-        assertNotNull("Expected non-null", response.getItems());
-        assertEquals("Expected 1 item", 1, response.getItems().size());
+        assertEquals("Expected 1 item", 1, response.size());
     }
 }

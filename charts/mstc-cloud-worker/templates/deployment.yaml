@@ -18,5 +18,15 @@ spec:
         - name: {{ .Values.app.name }}-container
           image: mstc/{{ .Values.app.name }}:{{ .Values.app.image.tag }}
           imagePullPolicy: {{ .Values.app.image.pullPolicy }}
+          env:
+            - name: WORK_QUEUE_HOST
+              value: {{ .Values.app.queue.host | squote }}
+            - name: WORK_QUEUE_PORT
+              value: {{ .Values.app.queue.port | squote }}
+            - name: WORK_QUEUE_USER
+              value: {{ .Values.app.queue.user | squote }}
+            - name: WORK_QUEUE_PASS
+              value: {{ .Values.app.queue.pass | squote }}
           ports:
             - containerPort: {{ .Values.app.ports.rest }}
+      serviceAccountName: {{ .Values.app.account }}

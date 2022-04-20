@@ -3,6 +3,12 @@
 app:
   replicaCount: 1
   name: mstc-cloud-worker
+  account: mstc
+  queue:
+    host: "mstc-work-queue"
+    port: "5672"
+    user: "guest"
+    pass: "guest"
   image:
     pullPolicy: IfNotPresent
     tag: 0.0.1
@@ -10,6 +16,7 @@ app:
     rest: 8080
   nodePorts:
     rest: 31008
+
 
 ingress:
   enabled: false

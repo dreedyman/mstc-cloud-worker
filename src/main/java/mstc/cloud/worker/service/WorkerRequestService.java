@@ -20,11 +20,7 @@ package mstc.cloud.worker.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import mstc.cloud.worker.domain.DataItem;
 import mstc.cloud.worker.domain.Request;
-import mstc.cloud.worker.domain.Response;
-import mstc.cloud.worker.job.K8sJob;
-import mstc.cloud.worker.job.K8sJobRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.Message;
@@ -34,9 +30,7 @@ import org.springframework.stereotype.Service;
 
 import javax.inject.Inject;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -49,6 +43,8 @@ public class WorkerRequestService {
     private ObjectMapper objectMapper;
     @Autowired
     private RequestSender requestSender;
+    @Autowired
+    private WorkerRequestProcessor workerRequestProcessor;
     private static final Logger logger = LoggerFactory.getLogger(WorkerRequestService.class);
 
     //@RabbitListener(queues = "${spring.rabbitmq.queue.work}")
@@ -60,9 +56,11 @@ public class WorkerRequestService {
             if (request.getImage() != null) {
                 logger.info("Received\n" + request);
             } else {
-                logger.info(String.format("Received BOGUS:\n%s", body));
+                throw new IllegalArgumentException(String.format("No image: %s", body));
             }
-            return processRequest(request);
+            Map<String, String> result = new HashMap<>();
+            result.put("result", workerRequestProcessor.processRequest(request));
+            return objectMapper.writeValueAsString(result);
         } catch(JsonProcessingException e) {
             logger.error("Processing JSON", e);
         } catch(Exception e) {
@@ -71,21 +69,5 @@ public class WorkerRequestService {
         return null;
     }
 
-    public String processRequest(Request request) throws JsonProcessingException {
-        K8sJob k8sJob = new K8sJob()
-                .image(request.getImage())
-                .name(request.getJobName())
-                .command(request.getCommand())
-                .args(request.getArgs());
-        K8sJobRunner jobRunner = new K8sJobRunner();
-        logger.info("Submitting job: " + request.getJobName());
-        String output = jobRunner.submit(k8sJob, K8sJob.TIMEOUT_MINS);
-
-        List<DataItem> items = new ArrayList<>();
-        String bucket = request.getBucket();
-        String endpoint = request.getEndpoint();
-        items.add(new DataItem().endpoint(endpoint).bucket(bucket).itemNames("foo", "bar"));
-        return objectMapper.writeValueAsString(new Response().items(items));
-    }
 
 }
