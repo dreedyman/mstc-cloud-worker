@@ -170,7 +170,5 @@ Optionally you can submit:
 * If the `timeOut` property is not ptovided, the default is 15 minutes.
 * If the `output bucket URL` is not provied, the input bucket is used.
 
-The expectation is that the kubernetes job will download all files in the `input bucket`, and upload all files to the `output bucket`. Once the client receives notification, it can then go pick up all files.
 
-NOTE: If there are errors, they will be put into files and copied to the `output bucket`.
 
