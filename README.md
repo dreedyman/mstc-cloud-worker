@@ -150,7 +150,7 @@ Then run `pytest`.
 The client submits the folloing data (as JSON):
 
 ```json
-{"image": "mstc/python-test",
+{"image": "mstc/python-test:latest",
  "jobName": "test-job",
  "inputBucketUrl" : "http://hostname:9000/bucket",
 } 
@@ -159,7 +159,7 @@ The client submits the folloing data (as JSON):
 Optionally you can submit:
 
 ```json
-{"image": "mstc/python-test",
+{"image": "mstc/python-test:latest",
  "timeOut": 5,
  "jobName": "test-job",
  "inputBucketUrl" : "http://hostname:9000/bucket",
