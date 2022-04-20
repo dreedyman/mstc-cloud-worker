@@ -35,8 +35,8 @@ class Client:
                                         correlation_id=self._corr_id,
                                         ),
                                     body=message)
-        print("[x] Sent data to RabbitMQ")
-        print("[x] Wait for response", end='')
+        print("Sent data to RabbitMQ")
+        print("Wait for response", end='')
         while self.response is None:
             print(".", end='')
             self._connection.process_data_events()

@@ -3,8 +3,10 @@ import pytest
 @pytest.fixture(scope="session")
 def client(config):
     from mstc_cloud_worker import Client
-    rabbit_cfg = config['spring']['rabbitmq']
-    return Client(rabbit_cfg['host'], rabbit_cfg['exchange'], rabbit_cfg['queue']['work'])
+    #rabbit_cfg = config['spring']['rabbitmq']
+    exchange = 'mstc.exchange'
+    work_queue = 'mstc.queue.work'
+    return Client('localhost', exchange, work_queue)
     
     
 @pytest.fixture(scope="session")
