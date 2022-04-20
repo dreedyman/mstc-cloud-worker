@@ -1,0 +1,19 @@
+# Values for Cloud Worker.
+
+app:
+  replicaCount: 1
+  name: mstc-work-queue
+  account: mstc
+  image:
+    name: rabbitmq
+    pullPolicy: IfNotPresent
+    tag: 3-management
+
+  ports:
+    name: 5672-5672
+    port: 5672
+    targetPort: 5672
+  admin:
+    name: 15672-15672
+    port: 15672
+    targetPort: 15672
