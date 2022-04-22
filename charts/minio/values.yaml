@@ -1,0 +1,18 @@
+# Values for Cloud Worker.
+
+app:
+  replicaCount: 1
+  name: minio
+  image:
+    name: quay.io/minio/minio
+    pullPolicy: IfNotPresent
+    tag: RELEASE.2022-04-16T04-26-02Z
+  ports:
+    name: 9000-9000
+    port: 9000
+    targetPort: 9000
+  admin:
+    name: 9001-9001
+    port: 9001
+    targetPort: 9001
+

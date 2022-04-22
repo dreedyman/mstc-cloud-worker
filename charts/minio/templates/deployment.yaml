@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.app.name }}
+  labels:
+    app.kubernetes.io/name: {{ .Values.app.name }}
+spec:
+  replicas: {{ .Values.app.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Values.app.name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ .Values.app.name }}
+    spec:
+      containers:
+        - name: {{ .Values.app.name }}
+          image: {{ .Values.app.image.name }}:{{ .Values.app.image.tag }}
+          imagePullPolicy: {{ .Values.app.image.pullPolicy }}
+          command:
+            - "minio"
+            - "server"
+            - "/data"
+            - "--console-address"
+            - ":{{ .Values.app.admin.port }}"
+          env:
+            #- name: MINIO_ROOT_USER
+            #  valueFrom:
+            #    secretKeyRef:
+            #      name: minio-secret
+            #      key: MINIO_USER
+            #- name: MINIO_ROOT_PASSWORD
+            #  valueFrom:
+            #    secretKeyRef:
+            #      name: minio-secret
+            #      key: MINIO_PASS
+          ports:
+            - containerPort: {{ .Values.app.ports.port }}
+              name: minioservice
+            - containerPort: {{ .Values.app.admin.port }}
+              name: minio-console
