@@ -25,13 +25,9 @@ import mstc.cloud.worker.job.K8sJob;
 import mstc.cloud.worker.job.K8sJobRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.amqp.core.Message;
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.inject.Inject;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -45,7 +41,7 @@ public class WorkerRequestProcessor {
     private ObjectMapper objectMapper;
     private static final Logger logger = LoggerFactory.getLogger(WorkerRequestProcessor.class);
 
-    public String processRequest(Request request) throws JsonProcessingException {
+    public String processRequest(Request request) throws Exception {
         K8sJob k8sJob = createJob(request);
         K8sJobRunner jobRunner = new K8sJobRunner();
         logger.info("Submitting job: " + request.getJobName());
@@ -56,9 +52,9 @@ public class WorkerRequestProcessor {
 
     public K8sJob createJob(Request request) {
         Map<String, String> env = new HashMap<>();
-        env.put("INPUT_BUCKET_URL", request.getInputBucketUrl());
-        if (request.getOutputBucketUrl() != null) {
-            env.put("OUTPUT_BUCKET_URL", request.getOutputBucketUrl());
+        env.put("INPUT_BUCKET", request.getInputBucket());
+        if (request.getOutputBucket() != null) {
+            env.put("OUTPUT_BUCKET", request.getOutputBucket());
         }
         int timeOut = request.getTimeOut() == 0 ? K8sJob.DEFAULT_TIMEOUT_MINUTES : request.getTimeOut();
         return K8sJob.builder()
@@ -67,13 +63,6 @@ public class WorkerRequestProcessor {
                      .timeOut(timeOut)
                      .image(request.getImage())
                      .env(env).build();
-        /*return new K8sJob()
-                .env(env)
-                .namespace("mstc-dev")
-                .image(request.getImage())
-                .name(request.getJobName())
-                .timeout(timeOut);*/
-
     }
 
 }

@@ -21,6 +21,7 @@ package mstc.cloud.worker.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mstc.cloud.worker.domain.Request;
+import mstc.cloud.worker.domain.RequestValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.Message;
@@ -42,31 +43,34 @@ public class WorkerRequestService {
     @Inject
     private ObjectMapper objectMapper;
     @Autowired
-    private RequestSender requestSender;
+    private RequestValidator requestValidator;
     @Autowired
     private WorkerRequestProcessor workerRequestProcessor;
     private static final Logger logger = LoggerFactory.getLogger(WorkerRequestService.class);
 
     //@RabbitListener(queues = "${spring.rabbitmq.queue.work}")
     @RabbitListener(queues = "#{workQueue.name}")
-    public String receiveMessage(Message message) /*throws Exception*/ {
+    public String receiveMessage(Message message) throws Exception {
         String body = new String(message.getBody(), StandardCharsets.UTF_8);
+        String output;
         try {
             Request request = objectMapper.readValue(body, Request.class);
-            if (request.getImage() != null) {
+            if (requestValidator.isValidRequest(request)) {
                 logger.info("Received\n" + request);
+                output = workerRequestProcessor.processRequest(request);
             } else {
-                throw new IllegalArgumentException(String.format("No image: %s", body));
+                output = "Invalid request "+ String.format("No image: %s", body);
             }
-            Map<String, String> result = new HashMap<>();
-            result.put("result", workerRequestProcessor.processRequest(request));
-            return objectMapper.writeValueAsString(result);
         } catch(JsonProcessingException e) {
             logger.error("Processing JSON", e);
+            output = String.format("%s: %s", e.getClass().getName(), e.getMessage());
         } catch(Exception e) {
-            logger.error("UNKNOWN", e);
+            logger.error("Error running Job", e);
+            output = String.format("%s: %s", e.getClass().getName(), e.getMessage());
         }
-        return null;
+        Map<String, String> result = new HashMap<>();
+        result.put("result", output);
+        return objectMapper.writeValueAsString(result);
     }
 
 

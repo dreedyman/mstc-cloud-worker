@@ -20,11 +20,6 @@ package mstc.cloud.worker.domain;
 
 import lombok.*;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-
 /**
  * @author dreedy
  */
@@ -34,19 +29,19 @@ public class Request {
     private String image;
     private String jobName;
     private int timeOut;
-    private String inputBucketUrl;
-    private String outputBucketUrl;
+    private String inputBucket;
+    private String outputBucket;
 
     public Request(String image,
                    String jobName,
                    int timeOut,
-                   String inputBucketUrl,
-                   String outputBucketUrl) {
+                   String inputBucket,
+                   String outputBucket) {
         this.image = image;
         this.jobName = jobName;
         this.timeOut = timeOut;
-        this.inputBucketUrl = inputBucketUrl;
-        this.outputBucketUrl = outputBucketUrl;
+        this.inputBucket = inputBucket;
+        this.outputBucket = outputBucket;
     }
 
     public Request image(String image) {
@@ -64,13 +59,13 @@ public class Request {
         return this;
     }
 
-    public Request inputBucketUrl(String inputBucketUrl) {
-        this.inputBucketUrl = inputBucketUrl;
+    public Request inputBucket(String inputBucket) {
+        this.inputBucket = inputBucket;
         return this;
     }
 
-    public Request outputBucketUrl(String outputBucketUrl) {
-        this.outputBucketUrl = outputBucketUrl;
+    public Request outputBucket(String outputBucket) {
+        this.outputBucket = outputBucket;
         return this;
     }
 

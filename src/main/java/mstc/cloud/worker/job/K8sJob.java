@@ -19,13 +19,17 @@ public class K8sJob {
     @Getter
     private String namespace;
     private String jobName;
+    private String jobNameUnique;
     @Getter
     private int timeOut;
     private Map<String, String> env;
     public static final int DEFAULT_TIMEOUT_MINUTES = 15;
 
     public String getJobName() {
-        return String.format("%s-%s", jobName, UUID.randomUUID());
+        if (jobNameUnique == null) {
+            jobNameUnique = String.format("%s-%s", jobName, UUID.randomUUID());
+        }
+        return jobNameUnique;
     }
 
     private List<EnvVar> getEnvVars() {
@@ -50,7 +54,7 @@ public class K8sJob {
                 .withLabels(Collections.singletonMap("foo", "bar"))
                 .endMetadata()
                 .withNewSpec()
-                .withTtlSecondsAfterFinished(30)
+                .withTtlSecondsAfterFinished(60)
                 //.withActiveDeadlineSeconds()
                 .withNewTemplate()
                 .withNewSpec()
