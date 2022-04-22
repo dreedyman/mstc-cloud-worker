@@ -15,14 +15,14 @@ The `cloud-worker` is a Spring Boot service, and also uses the [Fabric8's Java K
 
 1. Consumes work
 2. Unwraps request, obtains the `image` to run, a name for the `job`, an optional `timeout`, the `input bucket URL` and optional `output bucket URL`. 
-3. These values are then configured into a Kubernetes Job. The `input bucket URL` and optional `output bucket URL` are set as values for environment variables `INPUT_BUCKET_URL` and `OUTPUT_BUCKET_URL` respectively.
+3. These values are then configured into a Kubernetes Job. The `input bucket` and optional `output bucket` are set as values for environment variables `INPUT_BUCKET` and `OUTPUT_BUCKET` respectively.
 4. The Job is submitted and observed. Once complete the output of the Job is provided.
 
 **K8S Job**
 
 1. Is expected to download all files in the `input bucket`
 2. Do it's thing, and
-3. Upload all files to the `output bucket`. Once the client receives notification, it can then go pick up all files. NOTE: If there are errors that the K8s Job runs into, they will be put into files and copied to the `output bucket` as well.
+3. Upload all files to the `output bucket`. Once the client receives notification, it can then go pick up all files. NOTE: If there are errors that the K8s Job runs into, they will be put into files and copied to the `output bucket` as well. Should be noted that the `MINIO_SERVICE_HOST` and `MINIO_SERVICE_PORT` environment variables will have been set into the environment of the K8s job as well.
 
 
 ## Setting up Kubernetes
@@ -152,7 +152,7 @@ The client submits the folloing data (as JSON):
 ```json
 {"image": "mstc/python-test:latest",
  "jobName": "test-job",
- "inputBucketUrl" : "http://hostname:9000/bucket",
+ "inputBucket" : "bucket",
 } 
 ```
 
@@ -162,13 +162,13 @@ Optionally you can submit:
 {"image": "mstc/python-test:latest",
  "timeOut": 5,
  "jobName": "test-job",
- "inputBucketUrl" : "http://hostname:9000/bucket",
- "outputBucketUrl" : "http://hostname:9000/out-bucket",
+ "inputBucket" : "bucket",
+ "outputBucket" : "out-bucket",
 } 
 ```
 
 * If the `timeOut` property is not ptovided, the default is 15 minutes.
-* If the `output bucket URL` is not provied, the input bucket is used.
+* If the `output bucket` is not provied, the input bucket is used.
 
 
 
