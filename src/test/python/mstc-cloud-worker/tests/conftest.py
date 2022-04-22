@@ -24,10 +24,9 @@ def config():
 
 
 @pytest.fixture(scope="session")
-def data(config):
+def data():
     from mstc_cloud_worker import Data
-    minio_cfg = config['minio']
-    return Data(minio_cfg['host'], minio_cfg['port'], minio_cfg['user'], minio_cfg['password'])
+    return Data("localhost", 9000, "minioadmin", "minioadmin")
 
         
 @pytest.fixture

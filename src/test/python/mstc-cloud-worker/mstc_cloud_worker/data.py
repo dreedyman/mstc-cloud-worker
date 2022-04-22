@@ -18,9 +18,26 @@ class Data:
     def client(self):
         return self._client        
     
+    
     @property
     def endpoint(self):
         return f"http://{self._host}:{self._port}"
+        
+        
+    def download(self, bucket, to):
+        import os
+        
+        if not os.path.exists(to):
+            os.makedirs(to)
+            print("Created " + to)
+        items = []
+        for item in self._client.list_objects(bucket,recursive=True):
+            name = item.object_name
+            file_name = os.path.join(to, name)
+            self._client.fget_object(bucket, item.object_name, file_name)
+            items.append(file_name)
+        return items        
+        
         
     def upload(self, bucket, files):
         import os
@@ -30,8 +47,5 @@ class Data:
         for file in files:
             name = os.path.basename(file)
             self.client.fput_object(bucket, name, file)
-            #url = self._client.presigned_get_object(bucket, name)
-            #urls.append(url)
-            #item = {"endpoint": f"{self._host}:{self._port}", "bucket": bucket, "itemName": name}
             items.append(name)
         return items

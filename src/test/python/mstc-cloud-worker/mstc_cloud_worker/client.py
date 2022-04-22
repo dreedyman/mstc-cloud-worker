@@ -40,9 +40,7 @@ class Client:
         while self.response is None:
             print(".", end='')
             self._connection.process_data_events()
-        print("")
-        result = json.loads(self.response)
-        print("===> " + str(result))
+        return json.loads(self.response)
         
         
     def close(self):    
