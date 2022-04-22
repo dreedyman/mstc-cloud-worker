@@ -31,3 +31,6 @@ build/
 *.pyc
 __pycache__/
 __pypackages__/
+
+
+**/scratch/
