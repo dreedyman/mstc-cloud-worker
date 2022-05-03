@@ -4,21 +4,8 @@ spring:
     port: ${WORK_QUEUE_PORT}
     username: ${WORK_QUEUE_USER}
     password: ${WORK_QUEUE_PASS}
-      #exchange: mstc.exchange
-      #routingKey: mstc.routingKey
-      #queue:
-      #  response: mstc.queue.response
-      #  work: mstc.queue.work
-    publisher-confirm-type: correlated
-    publisher-returns: true
     template:
       mandatory: true
-minio:
-  host: minio
-  port: 9000
-  user: mstc
-  password: fishstick
-  bucket:
 
 logging:
   level:

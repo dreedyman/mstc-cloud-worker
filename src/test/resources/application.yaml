@@ -4,18 +4,7 @@ spring:
     port: ${WORK_QUEUE_PORT}
     username: ${WORK_QUEUE_USER}
     password: ${WORK_QUEUE_PASS}
-    #exchange: mstc.exchange
-    #routingKey: mstc.routingKey
-    #queue:
-    #  response: mstc.queue.response
-    #  work: mstc.queue.work
 
-minio:
-  host: localhost
-  port: 9000
-  user: mstc
-  password: shmystic
-  bucket: test-bucket
 
 logging:
   level:
