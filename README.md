@@ -14,7 +14,7 @@ The `cloud-worker` is a Spring Boot service, and also uses the [Fabric8's Java K
 **Cloud-Worker then:**
 
 1. Consumes work
-2. Unwraps request, obtains the `image` to run, a name for the `job`, an optional `timeout`, the `input bucket URL` and optional `output bucket URL`. 
+2. Unwraps request, obtains the `image` to run, a name for the `job`, an optional `timeout`, the `input bucket` and optional `output bucket`. 
 3. These values are then configured into a Kubernetes Job. The `input bucket` and optional `output bucket` are set as values for environment variables `INPUT_BUCKET` and `OUTPUT_BUCKET` respectively.
 4. The Job is submitted and observed. Once complete the output of the Job is provided.
 
@@ -34,44 +34,118 @@ The `config/service-account.yaml` file provides the setup to do this. In order t
 
 This will also setup the `mstc-dev` namespace (if not already created). If you want to switch to the `mstc-dev` namespace as the default, run:
 
-switch to use that namespace by default:
-`$ kubectl config set-context --current --namespace=mstc-dev`
+`kubectl config set-context --current --namespace=mstc-dev`
 
-TODO: There is still work to be dont to setup a secret to hold your username and password.
+TODO: There is still work to be done to setup a secret to hold your username and password.
 
 ## Deploying Services to Kubernetes
-We'll need to deploy both RabbitMQ and MinIO to Kubernetes, as well as the mstc-cloud-worker. So far charts have been setup for `mstc-cloud-worker` and `rabbitmq` in the charts directory.
+We'll need to deploy both RabbitMQ and MinIO to Kubernetes, as well as the `mstc-cloud-worker`. Charts have been setup for in the charts directory.
 
-There are tasks in the build.gradle file:
+```
+charts
+└── mstc-cloud-worker
+    ├── Chart.yaml
+    ├── charts
+    │   ├── minio
+    │   │   ├── Chart.yaml
+    │   │   ├── templates
+    │   │   │   ├── deployment.yaml
+    │   │   │   └── service.yaml
+    │   │   └── values.yaml
+    │   └── mstc-work-queue
+    │       ├── Chart.yaml
+    │       ├── templates
+    │       │   ├── deployment.yaml
+    │       │   └── service.yaml
+    │       └── values.yaml
+    ├── templates
+    │   ├── deployment.yaml
+    │   └── service.yaml
+    └── values.yaml
+```
+You'll notice a 3rd level `charts` directory. This is for the dependencies of the `mstc-cloud-worker`. They are configured as dependencies, and if you lok into the `mstc-cloud-worker`'s `Chart.yaml` file you'll see:
+
+```
+dependencies:
+  - name: minio
+    version: 0.1.0
+    repository: file://charts/minio
+  - name: mstc-work-queue
+    version: 0.1.0
+    repository: file://charts/mstc-work-queue
+```
+If you now run:
+
+`helm dependency list charts/mstc-cloud-worker`
+
+You should see:
+
+```
+NAME           	VERSION	REPOSITORY                     STATUS
+minio          	0.1.0  	file://charts/minio            unpacked    
+mstc-work-queue	0.1.0  	file://charts/mstc-work-queue. unpacked   
+```
+
+To turn the `unpacked` status to `ok`, run:
+
+`helm dependency build charts/mstc-cloud-worker`
+
+This will produce:
+
+```
+Saving 2 charts
+Deleting outdated charts
+```
+
+Then run:
+
+`helm dependency list charts/mstc-cloud-worker`
+
+You should see:
+
+```
+NAME           	VERSION	REPOSITORY                     STATUS
+minio          	0.1.0  	file://charts/minio            ok    
+mstc-work-queue	0.1.0  	file://charts/mstc-work-queue. ok   
+```
+
+
+When you want to deploy this to Kubernetes, there are tasks in the build.gradle file:
 
 * `helmInstall`
 * `helmUninstall`
 
-If you want to install/unistall separately run the followinf:
+Running `gradle 
 
-`helm (un)install mstc-work-queue charts/rabbitmq`
+If you want to install/unistall separately run the following:
+
 `helm (un)install mstc-cloud-worker charts/mstc-cloud-worker`
 
-Once everything is deployed, you can get a view of whats running by looksing at
+Once you have deployed the project, you can get a view of whats running by looking at:
 
 `kubectl get all -n mstc-dev`
 
 ```
-NAME                                     READY   STATUS    RESTARTS   AGE
-pod/mstc-cloud-worker-6ff966fdf9-959s2   1/1     Running   0          54m
-pod/mstc-work-queue-744986cb5c-nr47l     1/1     Running   0          54m
+NNAME                                     READY   STATUS    RESTARTS   AGE
+pod/minio-84d87f5f76-x79sn               1/1     Running   0          18s
+pod/mstc-cloud-worker-6ff966fdf9-krqbt   1/1     Running   0          18s
+pod/mstc-work-queue-744986cb5c-95m66     1/1     Running   0          18s
 
-NAME                        TYPE       CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
-service/mstc-cloud-worker   NodePort   10.111.33.122   <none>        8080:31008/TCP   54m
-service/mstc-work-queue     NodePort   10.97.101.165   <none>        5672:30435/TCP   54m
+NAME                        TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)             AGE
+service/minio               ClusterIP   10.107.165.122   <none>        9000/TCP,9001/TCP   18s
+service/mstc-cloud-worker   NodePort    10.105.184.209   <none>        8080:31008/TCP      18s
+service/mstc-work-queue     ClusterIP   10.111.3.84      <none>        5672/TCP            18s
 
 NAME                                READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/mstc-cloud-worker   1/1     1            1           54m
-deployment.apps/mstc-work-queue     1/1     1            1           54m
+deployment.apps/minio               1/1     1            1           18s
+deployment.apps/mstc-cloud-worker   1/1     1            1           18s
+deployment.apps/mstc-work-queue     1/1     1            1           18s
 
 NAME                                           DESIRED   CURRENT   READY   AGE
-replicaset.apps/mstc-cloud-worker-6ff966fdf9   1         1         1       54m
-replicaset.apps/mstc-work-queue-744986cb5c     1         1         1       54m
+replicaset.apps/minio-84d87f5f76               1         1         1       18s
+replicaset.apps/mstc-cloud-worker-6ff966fdf9   1         1         1       18s
+replicaset.apps/mstc-work-queue-744986cb5c     1         1         1       18s
+
 ```
 
 If you've got to here, you'll want to run something. You'll first need to `port-forward` for RabbitMQ:
@@ -84,12 +158,22 @@ Forwarding from [::1]:5672 -> 5672
 
 This maps `localhost` port `5672` to the pods port `5672`. If you want to access RabbitMQ's admin page, you'll also need to do the same for port `15672`. Note that you'll need different terminals for the `port-forward` command, or you can run it in the background `&`.
 
+And don't forget you'll also need to do the same for MinIO:
+
+```
+kubectl -n mstc-dev port-forward minio-84d87f5f76-w2stq 9000:9000
+Forwarding from 127.0.0.1:9000 -> 9000
+Forwarding from [::1]:9000 -> 9000
+```
+
+
+
 ## Running the Python Client
 The Python client is a test case. Just run `pytest`. However, you first need to build the test Docker image. To do that:
 
 1. cd to the `src/test/python/mstc-cloud-worker` directory
 2. Run `poetry shell`
-3. Run `make dist`. This will create a Docker image containing the `mstc_cloud_worker/main.py` file. That files grabs environment variables, logs some messages, sleeps for 5 seconds and returns.
+3. Run `make dist`. This will create a Docker image containing the `mstc_cloud_worker/main.py` file. That simple app grabs environment variables, logs some messages, sleeps for 5 seconds and returns.
 
 Before running `pytest` it is helpful to get a new terminal and follow the logs of the `mstc-cloud-worker`:
 
@@ -98,7 +182,7 @@ Before running `pytest` it is helpful to get a new terminal and follow the logs 
 You'll then be following the log, you'll see something like this:
 
 ```
-__  __ ____ _____ ____    ____ _                 _  __        __         _
+  __  __ ____ _____ ____    ____ _                 _  __        __         _
  |  \/  / ___|_   _/ ___|  / ___| | ___  _   _  __| | \ \      / /__  _ __| | _____ _ __
  | |\/| \___ \ | || |     | |   | |/ _ \| | | |/ _` |  \ \ /\ / / _ \| '__| |/ / _ \ '__|
  | |  | |___) || || |___  | |___| | (_) | |_| | (_| |   \ V  V / (_) | |  |   <  __/ |
@@ -147,12 +231,12 @@ __  __ ____ _____ ____    ____ _                 _  __        __         _
 ```
 Then run `pytest`.
 
-The client submits the folloing data (as JSON):
+The client submits the following data (as JSON):
 
 ```json
 {"image": "mstc/python-test:latest",
  "jobName": "test-job",
- "inputBucket" : "bucket",
+ "inputBucket" : "in.bucket",
 } 
 ```
 
@@ -162,12 +246,12 @@ Optionally you can submit:
 {"image": "mstc/python-test:latest",
  "timeOut": 5,
  "jobName": "test-job",
- "inputBucket" : "bucket",
- "outputBucket" : "out-bucket",
+ "inputBucket" : "in.bucket",
+ "outputBucket" : "out.bucket",
 } 
 ```
 
-* If the `timeOut` property is not ptovided, the default is 15 minutes.
+* If the `timeOut` property is not provided, the default is 15 minutes.
 * If the `output bucket` is not provied, the input bucket is used.
 
 
