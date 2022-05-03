@@ -49,3 +49,9 @@ class Data:
             self.client.fput_object(bucket, name, file)
             items.append(name)
         return items
+    
+    
+    def delete(self, bucket):
+        for item in self._client.list_objects(bucket,recursive=True):
+            name = item.object_name
+            self._client.remove_object(bucket, item.object_name)
