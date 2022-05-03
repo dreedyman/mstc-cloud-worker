@@ -4,3 +4,11 @@ description: A Helm chart for Kubernetes Cloud Worker
 type: application
 version: 0.1.0
 appVersion: "0.0.1"
+
+dependencies:
+  - name: minio
+    version: 0.1.0
+    repository: file://charts/minio
+  - name: mstc-work-queue
+    version: 0.1.0
+    repository: file://charts/mstc-work-queue
