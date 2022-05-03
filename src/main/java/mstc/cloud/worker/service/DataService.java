@@ -22,6 +22,9 @@ import io.minio.*;
 import io.minio.messages.Item;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -34,29 +37,37 @@ import java.util.List;
 /**
  * @author dreedy
  */
+@Service
 public class DataService {
-    private final String endpoint;
-    private final MinioClient minioClient;
+    @Value("${MINIO_SERVICE_HOST}")
+    private String host;
+    @Value("${MINIO_SERVICE_PORT}")
+    private String port;
+    @Value("${MINIO_ROOT_USER:minioadmin}")
+    private String user;
+    @Value("${MINIO_ROOT_PASSWORD:minioadmin}")
+    private String password;
+    private String endpoint;
+    private MinioClient minioClient;
     private static final Logger LOGGER = LoggerFactory.getLogger(DataService.class);
-
-    public DataService(String endpoint,
-                       String user,
-                       String password) {
-        this.endpoint = endpoint;
-        minioClient = MinioClient.builder().endpoint(endpoint)
-                                 .credentials(user, password)
-                                 .build();
-    }
 
     public String getEndpoint() {
         return endpoint;
     }
 
     public MinioClient getMinioClient() {
+        if (minioClient == null) {
+            LOGGER.info("host: " + host +", port: " + port);
+            endpoint = String.format("http://%s:%s", host, port);
+            minioClient = MinioClient.builder().endpoint(endpoint)
+                                     .credentials(user, password)
+                                     .build();
+        }
         return minioClient;
     }
 
     public void bucket(String bucket) throws Exception {
+        getMinioClient();
         if (!minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucket).build())) {
             minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucket).build());
             LOGGER.info("Created bucket: " + bucket);
@@ -64,6 +75,7 @@ public class DataService {
     }
 
     public List<String> upload(String bucket, File... files) throws Exception {
+        getMinioClient();
         bucket(bucket);
         List<String> items = new ArrayList<>();
         for (File file : files) {
@@ -78,6 +90,7 @@ public class DataService {
     }
 
     public File get(File downloadTo, String bucket, String name) throws Exception {
+        getMinioClient();
         File to = new File(downloadTo, name);
         try (InputStream is = minioClient.getObject(GetObjectArgs.builder().bucket(bucket).object(name).build());
              FileOutputStream fos = new FileOutputStream(to)) {
@@ -92,6 +105,7 @@ public class DataService {
     }
 
     public List<File> getAll(File downloadTo, String bucket) throws Exception {
+        getMinioClient();
         List<File> downloaded = new ArrayList<>();
         Iterable<Result<Item>> results = minioClient.listObjects(ListObjectsArgs.builder().bucket(bucket).build());
         for (Result<Item> result : results) {
@@ -101,26 +115,4 @@ public class DataService {
         return downloaded;
     }
 
-    public List<File> download(File downloadTo, URL... urls) throws IOException {
-        List<File> files = new ArrayList<>();
-        for (URL from : urls) {
-            String path = from.getPath();
-            int ndx = from.getPath().lastIndexOf("/");
-            if (ndx != -1) {
-                path = from.getPath().substring(ndx + 1);
-            }
-            File to = new File(downloadTo, path);
-            try (InputStream is = from.openStream();
-                 FileOutputStream fos = new FileOutputStream(to)) {
-                int bufferSize = 4096;
-                byte[] buffer = new byte[bufferSize];
-                int bytesRead;
-                while ((bytesRead = is.read(buffer)) != -1) { // EOF
-                    fos.write(buffer, 0, bytesRead);
-                }
-            }
-            files.add(to);
-        }
-        return files;
-    }
 }

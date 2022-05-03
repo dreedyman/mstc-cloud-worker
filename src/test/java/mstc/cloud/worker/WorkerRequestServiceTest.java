@@ -67,10 +67,11 @@ public class WorkerRequestServiceTest {
     private AmqpAdmin amqpAdmin;
     @Autowired
     private RabbitTemplate rabbitTemplate;
-    @Autowired
-    private WorkerRequestService workerRequestService;
+    /*@Autowired
+    private WorkerRequestService workerRequestService;*/
     private List<String> inputItems;
     private String endpoint;
+    @Autowired
     private DataService dataService;
     @Rule
     public KubernetesServer server = new KubernetesServer(true, true);
@@ -78,12 +79,10 @@ public class WorkerRequestServiceTest {
     @Before
     public  void setup() throws Exception {
         endpoint = String.format("http://%s:%s", host, port);
-        //check(new MinIOCheck());
-        //check(new RabbitMQCheck());
-        dataService = new DataService(endpoint, user, password);
+        check(new MinIOCheck());
+        check(new RabbitMQCheck());
         File testFileDir = new File(System.getProperty("test.data.dir"));
-        //inputItems = dataService.upload(bucket, testFileDir.listFiles());
-        inputItems = new ArrayList<>();
+        inputItems = dataService.upload(bucket, testFileDir.listFiles());
         inputItems.add("foo");
         inputItems.add("bar");
     }
@@ -106,14 +105,14 @@ public class WorkerRequestServiceTest {
     @Test
     public void testWorker() throws Exception {
         assertNotNull("Expected sender, not injected", requestSender);
-        String[] args = new String[]{"/bin/sh", "-c", "date; echo Hello from Kubernetes"};
-        //String image = "mstc/astros-eap-12.5:0.2.0";
-        String image = "busybox";
+        //String image = "mstc/astros-eap-12.5:0.3.0";
+        String image = "mstc/python-test";
         Request request = new Request(image,
-                                      "say something",
+                                      "test-job",
                                       5,
-                                      dataService.getEndpoint() +"/" + bucket,
-                                      dataService.getEndpoint() +"/" + bucket);
+                                      "test.in.bucket",
+                                      "test.out.bucket");
+        requestSender.sendAndReceive(request);
     }
 
     @Test

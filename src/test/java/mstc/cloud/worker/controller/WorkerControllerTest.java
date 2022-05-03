@@ -59,7 +59,7 @@ public class WorkerControllerTest {
 
     @Test
     public void exec() throws JsonProcessingException {
-        Request request = new Request().inputBucket("http://localhost:9000/red-rover/");
+        Request request = new Request().inputBucket("red-rover/");
         ResponseEntity<String> result = workerController.exec(request);
         assertNotNull("Expected non-null", result);
         assertEquals("Expected 200, got: " + result.getStatusCode(),

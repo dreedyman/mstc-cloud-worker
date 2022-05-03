@@ -67,7 +67,8 @@ public class RequestSender {
                 .setContentType(MessageProperties.CONTENT_TYPE_JSON)
                 .build();
 
-        rabbitTemplate.convertAndSend(workerConfig.getExchange(), workQueue.getName(), message);
+        Object result = rabbitTemplate.convertSendAndReceive(workerConfig.getExchange(), workQueue.getName(), message);
+        System.out.println(result);
     }
 
     public void sendAndReceive(Request request) throws Exception {
@@ -81,13 +82,14 @@ public class RequestSender {
         MessagePostProcessor messagePostProcessor = message -> {
             MessageProperties messageProperties
                     = message.getMessageProperties();
-            messageProperties.setReplyTo(responseQueue.getName());
+            messageProperties.setReplyTo(workQueue.getName());
             messageProperties.setCorrelationId(correlationId.toString());
             return message;
         };
 
         //rabbitTemplate.convertAndSend(exchange, routingKey, requestMessage, messagePostProcessor);
-        rabbitTemplate.convertSendAndReceive(workerConfig.exchange().getName(),
-                                             workerConfig.getRoutingKey(), requestMessage, messagePostProcessor);
+        Object result = rabbitTemplate.convertSendAndReceive(workerConfig.getExchange(),
+                                                             workQueue.getName(), requestMessage/*, messagePostProcessor*/);
+        System.out.println(result);
     }
 }

@@ -92,12 +92,6 @@ public class WorkerConfig implements RabbitListenerConfigurer {
     }
 
     @Bean
-    public Queue responseQueue(){
-        String responseQueue = "mstc.queue.response";
-        return QueueBuilder.durable(responseQueue).build();
-    }
-
-    @Bean
     public Queue workQueue(){
         String workQueue = "mstc.queue.work";
         return QueueBuilder.durable(workQueue).build();
@@ -106,11 +100,6 @@ public class WorkerConfig implements RabbitListenerConfigurer {
     @Bean
     public DirectExchange exchange() {
         return new DirectExchange(exchange);
-    }
-
-    @Bean
-    public Binding responseBinding(DirectExchange exchange) {
-        return BindingBuilder.bind(responseQueue()).to(exchange()).with(routingKey);
     }
 
     @Bean
@@ -138,10 +127,6 @@ public class WorkerConfig implements RabbitListenerConfigurer {
         return new AsyncRabbitTemplate(rabbitTemplate);
     }
 
-
-    /**
-     * @return the admin bean that can declare queues etc.
-     */
     @Bean
     public AmqpAdmin amqpAdmin() {
         return new RabbitAdmin(connectionFactory());

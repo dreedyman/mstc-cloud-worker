@@ -5,16 +5,6 @@
  * For more details take a look at the Java Libraries chapter in the Gradle
  * user guide available at https://docs.gradle.org/4.2/userguide/java_library_plugin.html
  */
-buildscript {
-    repositories {
-        jcenter()
-    }
-    dependencies {
-        classpath group: 'org.yaml', name: 'snakeyaml', version: '1.30'
-    }
-}
-
-import org.yaml.snakeyaml.Yaml
 
 plugins {
     id 'org.springframework.boot' version '2.6.4'
@@ -35,10 +25,7 @@ ext {
     okhttp3Verdsion = "4.9.3"
 }
 
-// In this section you declare where to find the dependencies of your project
 repositories {
-    // Use jcenter for resolving your dependencies.
-    // You can declare any Maven/Ivy/file repository here.
     jcenter()
 }
 
@@ -68,6 +55,7 @@ bootRun {
     sourceResources sourceSets.main
     systemProperty 'spring.profiles.active', System.getProperty('spring.profiles.active') ?: 'local'
     systemProperty 'user.timezone', System.getProperty('user.timezone') ?: 'UTC'
+    environment = env()
 }
 
 docker {
@@ -76,17 +64,6 @@ docker {
     buildArgs(['JAR_FILE': "${bootJar.archiveFileName.get()}"])
 }
 
-def composeOut(String action) {
-    project.buildDir.mkdirs()
-    new File("${project.buildDir.path}/docker-compose-${action}.out")
-}
-
-def auth() {
-    def configYaml = new File("${project.projectDir.path}/src/test/resources/application.yaml")
-    Yaml yaml = new Yaml()
-    def config = yaml.load(configYaml.newInputStream())
-    ['MINIO_USERNAME': config['minio']['user'], 'MINIO_PASSWORD': config['minio']['password']]
-}
 
 def helmExec(List<String> args) {
     def command = ["helm"]
@@ -98,14 +75,12 @@ def helmExec(List<String> args) {
 task helmInstall() {
     doLast {
         helmExec(["install", "mstc-cloud-worker", "${project.projectDir.path}/charts/mstc-cloud-worker", "-n", "mstc-dev"])
-        helmExec(["install", "mstc-work-queue", "${project.projectDir.path}/charts/rabbitmq", "-n", "mstc-dev"])
     }
 }
 
 task helmUninstall() {
     doLast {
         helmExec(["uninstall", "mstc-cloud-worker", "-n", "mstc-dev"])
-        helmExec(["uninstall", "mstc-work-queue", "-n", "mstc-dev"])
     }
 }
 
@@ -115,33 +90,26 @@ task helm() {
 
 clean.dependsOn(helmUninstall)
 
-def composeExec(String action) {
-    def command = ["docker-compose", "-f", "${project.projectDir.path}/src/test/resources/docker-compose.yml", "$action"]
-    def pb = new ProcessBuilder(command as String[])
-    pb.environment().putAll(auth() as Map<String, String>)
-    pb.redirectOutput(ProcessBuilder.Redirect.appendTo(composeOut(action))).redirectErrorStream(true).start()
-}
-
-task composeUp() {
-    doLast {
-        composeExec("up")
-    }
-}
-
-task composeDown() {
-    doLast {
-        composeExec("down")
-    }
+def env() {
+    ["MINIO_SERVICE_HOST": "localhost",
+     "MINIO_SERVICE_PORT": "9000",
+     "MINIO_ROOT_USER": "minioadmin",
+     "MINIO_PASSWORD": "minioadmin",
+     "WORK_QUEUE_HOST": "localhost",
+     "WORK_QUEUE_PORT": "5672",
+     "WORK_QUEUE_USER": "guest",
+     "WORK_QUEUE_PASS": "guest"]
 }
 
 test {
     //dependsOn composeUp
-    environment "MINIO_USERNAME", "mstc"
-    environment "MINIO_PASSWORD", "shmystic"
+    environment "MINIO_SERVICE_HOST", "localhost"
+    environment "MINIO_SERVICE_PORT", "9000"
     environment "WORK_QUEUE_HOST", "localhost"
     environment "WORK_QUEUE_PORT", "5672"
     environment "WORK_QUEUE_USER", "guest"
     environment "WORK_QUEUE_PASS", "guest"
+
     systemProperty "test.data.dir", "${project.projectDir.path}/src/test/data"
     systemProperty "test.download.dir", "${project.buildDir.path}/download"
     systemProperty "test.resources.dir", "${project.projectDir.path}/src/test/resources"
