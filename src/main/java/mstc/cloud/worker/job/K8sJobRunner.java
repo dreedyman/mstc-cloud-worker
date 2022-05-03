@@ -3,83 +3,73 @@ package mstc.cloud.worker.job;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.*;
-import io.fabric8.kubernetes.client.dsl.PodResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
  * @author dreedy
  */
 public class K8sJobRunner {
+    private KubernetesClient client;
     private static final Logger logger = LoggerFactory.getLogger(K8sJobRunner.class);
     private final ObjectMapper mapper = new ObjectMapper();
-    private final ThreadPoolExecutor executor =
-            (ThreadPoolExecutor) Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+
+    public void setClient(KubernetesClient client) {
+        this.client = client;
+    }
 
     public String submit(K8sJob k8sJob) throws JobException {
-        Job job = k8sJob.getJob();
-        Config config = new ConfigBuilder().build();
         String namespace = k8sJob.getNamespace();
         JobMetrics jobMetrics = new JobMetrics();
         String output;
-        try (KubernetesClient client = new DefaultKubernetesClient(config)) {
-            String jobName = k8sJob.getJobName();
+        if (client == null) {
+            Config config = new ConfigBuilder().build();
+            client = new DefaultKubernetesClient(config);
+        }
+        try {
+            Job job = k8sJob.getJob();
+            String jobName = k8sJob.getJobNameUnique();
             logJobCreation(jobName, namespace, job);
             jobMetrics.setSubmitted(Instant.now());
-            client.batch().v1().jobs().inNamespace(namespace).createOrReplace(job);
+            Job createdJob = client.batch().v1().jobs().inNamespace(namespace).createOrReplace(job);
             logger.info(String.format("Job \"%s\" is created in namespace %s, timeout of %s minutes, waiting for result...",
                                       jobName,
                                       namespace,
                                       k8sJob.getTimeOut()));
-            output = watch(client, job, k8sJob);
+            output = watch(client, createdJob, k8sJob);
+
         } finally {
+            client.close();
             jobMetrics.setReturned(Instant.now());
-            logger.info(String.format("Job %s duration: %d ms", k8sJob.getJobName(), jobMetrics.getJobDuration()));
+            logger.info(String.format("Job %s duration: %d ms", k8sJob.getJobNameUnique(), jobMetrics.getJobDuration()));
         }
         return output;
     }
 
     private String watch(KubernetesClient client, Job job, K8sJob k8sJob) throws JobException {
         String namespace = k8sJob.getNamespace();
-        PodList podList = client.pods().inNamespace(namespace).withLabel("job-name",
-                                                                         k8sJob.getJobName()).list();
+        logger.info("Watching job: " + k8sJob.getJobNameUnique());
         CountDownLatch countDownLatch = new CountDownLatch(1);
-        logger.info("Wait for pod to become available...");
-        executor.submit(new PodListWaiter(countDownLatch, podList));
-        boolean foundPod;
+        client.pods()
+              .inNamespace(namespace)
+              .withLabel("job-name", k8sJob.getJobNameUnique())
+              .watch(new PodWatcher(countDownLatch));
+        boolean returned;
         try {
-            foundPod = countDownLatch.await(30, TimeUnit.SECONDS);
+            returned = countDownLatch.await(k8sJob.getTimeOut(), TimeUnit.MINUTES);
         } catch (InterruptedException e) {
-            throw new JobException("Pod was not available after 30 seconds", e);
+            throw new JobException("Job interrupted", e);
         }
-        logger.info("Count down latch: " + countDownLatch.getCount());
-        if (!foundPod || podList.getItems().size() == 0) {
-            throw new JobException("No pod found");
+        if (!returned) {
+            throw new JobException("Job timed out");
         }
-        logger.info("Pod availability count: " + podList.getItems().size());
-        String name = podList.getItems().get(0).getMetadata().getName();
-        logger.info("Watching job: " + name);
-        try {
-            client.pods().inNamespace(namespace).withName(name)
-                  .waitUntilCondition(pod -> pod.getStatus().getPhase().equals("Succeeded") || pod.getStatus()
-                                                                                                  .getPhase()
-                                                                                                  .equals("Failed"),
-                                      k8sJob.getTimeOut(),
-                                      TimeUnit.MINUTES);
-            return client.batch().v1().jobs().inNamespace(namespace).withName(job.getMetadata().getName()).getLog();
-        } finally {
-            boolean isDeleted = client.batch().v1().jobs().inNamespace(namespace).withName(name).delete();
-            logger.info("Job {} deleted: {}", name, isDeleted);
-        }
+        return client.batch().v1().jobs().inNamespace(namespace).withName(job.getMetadata().getName()).getLog();
     }
 
     private void logJobCreation(String jobName, String namespace, Job job) {
@@ -101,25 +91,44 @@ public class K8sJobRunner {
         }
     }
 
-    private static class PodListWaiter implements Runnable {
+    private static class PodWatcher implements Watcher<Pod> {
         CountDownLatch countDownLatch;
-        PodList podList;
 
-        public PodListWaiter(CountDownLatch countDownLatch, PodList podList) {
+        public PodWatcher(CountDownLatch countDownLatch) {
             this.countDownLatch = countDownLatch;
-            this.podList = podList;
         }
 
         @Override
-        public void run() {
-            while(podList.getItems().size() == 0) {
-                try {
-                    Thread.sleep(10);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
+        public boolean reconnecting() {
+            return Watcher.super.reconnecting();
+        }
+
+        @Override
+        public void eventReceived(Action action, Pod resource) {
+            switch(resource.getStatus().getPhase()) {
+                case "Succeeded":
+                    logger.info("Job Succeeded");
+                    countDownLatch.countDown();
+                    break;
+                case "Failed":
+                    logger.info("Job Failed");
+                    countDownLatch.countDown();
+                    break;
+                default:
+                    logger.info("Job phase: " + resource.getStatus().getPhase());
             }
-            countDownLatch.countDown();
+
+        }
+
+        @Override
+        public void onClose() {
+            logger.info("On Close");
+            Watcher.super.onClose();
+        }
+
+        @Override
+        public void onClose(WatcherException cause) {
+            logger.info("On Close, exception? " + (cause == null));
         }
     }
 }

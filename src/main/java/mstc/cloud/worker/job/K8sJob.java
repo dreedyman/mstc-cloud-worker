@@ -1,8 +1,6 @@
 package mstc.cloud.worker.job;
 
 import io.fabric8.kubernetes.api.model.EnvVar;
-import io.fabric8.kubernetes.api.model.Quantity;
-import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import lombok.Builder;
@@ -18,6 +16,7 @@ public class K8sJob {
     private String image;
     @Getter
     private String namespace;
+    @Getter
     private String jobName;
     private String jobNameUnique;
     @Getter
@@ -25,7 +24,7 @@ public class K8sJob {
     private Map<String, String> env;
     public static final int DEFAULT_TIMEOUT_MINUTES = 15;
 
-    public String getJobName() {
+    public String getJobNameUnique() {
         if (jobNameUnique == null) {
             jobNameUnique = String.format("%s-%s", jobName, UUID.randomUUID());
         }
@@ -50,8 +49,12 @@ public class K8sJob {
         return new JobBuilder()
                 .withApiVersion("batch/v1")
                 .withNewMetadata()
-                .withName(getJobName())
-                .withLabels(Collections.singletonMap("foo", "bar"))
+                .withName(getJobNameUnique())
+                .addToLabels("app.kubernetes.io/name", jobName)
+                .addToLabels("app.kubernetes.io/instance", jobNameUnique)
+                .addToLabels("app.kubernetes.io/part-of", "MSTC")
+                .addToLabels("app.kubernetes.io/managed-by", "helm")
+                .addToLabels("app.kubernetes.io/created-by", "mstc-cloud-worker")
                 .endMetadata()
                 .withNewSpec()
                 .withTtlSecondsAfterFinished(60)
