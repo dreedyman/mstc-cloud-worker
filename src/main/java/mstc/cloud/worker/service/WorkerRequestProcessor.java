@@ -62,7 +62,7 @@ public class WorkerRequestProcessor {
         String output = jobRunner.submit(k8sJob);
         logger.info("Result:\n" + output);
         writeLogAndSend(output, k8sJob.getJobName() + ".log", request);
-        return "Job " + k8sJob.getJobNameUnique() + "complete.";
+        return "Job " + k8sJob.getJobNameUnique() + " complete.";
     }
 
     private void writeLogAndSend(String content, String name, Request request)  {
@@ -70,7 +70,7 @@ public class WorkerRequestProcessor {
                 System.getenv("SCRATCH_DIR");
 
         File log = new File(tmpDir, name);
-        String bucket = request.getOutputBucket() != null ? request.getOutputBucket() : request.getInputBucket();
+        String bucket = request.getOutputBucket();
         try {
             Files.write(log.toPath(), content.getBytes(StandardCharsets.UTF_8));
             dataService.upload(bucket, log);
@@ -85,9 +85,7 @@ public class WorkerRequestProcessor {
         Map<String, String> env = new HashMap<>();
         env.put("MSTC_JOB", "true");
         env.put("INPUT_BUCKET", request.getInputBucket());
-        if (request.getOutputBucket() != null) {
-            env.put("OUTPUT_BUCKET", request.getOutputBucket());
-        }
+        env.put("OUTPUT_BUCKET", request.getOutputBucket());
         int timeOut = request.getTimeOut() == 0 ? K8sJob.DEFAULT_TIMEOUT_MINUTES : request.getTimeOut();
         return K8sJob.builder()
                      .jobName(request.getJobName())
