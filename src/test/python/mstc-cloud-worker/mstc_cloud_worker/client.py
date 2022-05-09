@@ -35,7 +35,7 @@ class Client:
                                         correlation_id=self._corr_id,
                                         ),
                                     body=message)
-        print("Sent data to RabbitMQ")
+        print("Sent request to work queue")
         print("Wait for response", end='')
         while self.response is None:
             print(".", end='')
