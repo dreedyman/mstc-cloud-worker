@@ -3,11 +3,10 @@ kind: Service
 metadata:
   name: {{ .Values.app.name }}
 spec:
-  type: NodePort
   selector:
     app.kubernetes.io/name: {{ .Values.app.name }}
   ports:
     - protocol: TCP
       name: {{ .Values.app.name }}-rest
       port: {{ .Values.app.ports.rest }}
-      nodePort: {{ .Values.app.nodePorts.rest }}
+      #nodePort: {{ .Values.app.nodePorts.rest }}
