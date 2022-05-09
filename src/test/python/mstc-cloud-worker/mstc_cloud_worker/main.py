@@ -14,10 +14,7 @@ if __name__ == "__main__":
     port = os.environ['MINIO_SERVICE_PORT']    
     endpoint = "http://" + host + ":" + port
     input_bucket = os.environ['INPUT_BUCKET']
-    if "OUTPUT_BUCKET" in os.environ:
-        output_bucket = os.environ['OUTPUT_BUCKET']
-    else:
-        output_bucket = input_bucket
+    output_bucket = os.environ['OUTPUT_BUCKET']
                     
     logging.debug("endpoint:  " + endpoint)
     logging.debug("input bucket:    " + input_bucket)
