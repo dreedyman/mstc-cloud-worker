@@ -23,7 +23,7 @@ The `cloud-worker` is a Spring Boot service, and also uses the [Fabric8's Java K
 
 1. Is expected to download all files in the `input bucket`
 2. Do it's thing, and
-3. Upload all files to the `output bucket`. Once the client receives notification, it can then go pick up all files. NOTE: The EAP (Job) determines what files to upload. If there are errors that the K8s Job runs into, they will be put into files and copied to the `output bucket` as well. Should be noted that the `MINIO_SERVICE_HOST` and `MINIO_SERVICE_PORT` environment variables will have been set into the environment of the K8s job as well.
+3. Uploads the files it produces as outputs to the `output bucket`. Once the client receives notification, it can then go pick up all files. NOTE: Should be noted that the `MINIO_SERVICE_HOST` and `MINIO_SERVICE_PORT` environment variables will have been set into the environment of the K8s job as well.
 
 The Kubernetes Job is configured for automatic cleanup after it is finished as described [here](https://kubernetes.io/docs/concepts/workloads/controllers/ttlafterfinished/). The TTL (time to live) mechanism is set for 30 seconds.
 
@@ -136,7 +136,7 @@ pod/mstc-work-queue-744986cb5c-95m66     1/1     Running   0          18s
 
 NAME                        TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)             AGE
 service/minio               ClusterIP   10.107.165.122   <none>        9000/TCP,9001/TCP   18s
-service/mstc-cloud-worker   NodePort    10.105.184.209   <none>        8080:31008/TCP      18s
+service/mstc-cloud-worker   ClusterIP   10.105.184.209   <none>        8080/TCP            18s
 service/mstc-work-queue     ClusterIP   10.111.3.84      <none>        5672/TCP            18s
 
 NAME                                READY   UP-TO-DATE   AVAILABLE   AGE
@@ -185,52 +185,38 @@ Before running `pytest` it is helpful to get a new terminal and follow the logs 
 You'll then be following the log, you'll see something like this:
 
 ```
-  __  __ ____ _____ ____    ____ _                 _  __        __         _
  |  \/  / ___|_   _/ ___|  / ___| | ___  _   _  __| | \ \      / /__  _ __| | _____ _ __
  | |\/| \___ \ | || |     | |   | |/ _ \| | | |/ _` |  \ \ /\ / / _ \| '__| |/ / _ \ '__|
  | |  | |___) || || |___  | |___| | (_) | |_| | (_| |   \ V  V / (_) | |  |   <  __/ |
  |_|  |_|____/ |_| \____|  \____|_|\___/ \__,_|\__,_|    \_/\_/ \___/|_|  |_|\_\___|_|
 
-2022-04-19 21:30:07.672  INFO 1 --- [           main] mstc.cloud.worker.WorkerApplication      : Starting WorkerApplication using Java 11.0.14 on mstc-cloud-worker-5f784bcf88-889z6 with PID 1 (/app.jar started by root in /)
-2022-04-19 21:30:07.679 DEBUG 1 --- [           main] mstc.cloud.worker.WorkerApplication      : Running with Spring Boot v2.6.4, Spring v5.3.16
-2022-04-19 21:30:07.681  INFO 1 --- [           main] mstc.cloud.worker.WorkerApplication      : The following 1 profile is active: "local"
-2022-04-19 21:30:10.593  INFO 1 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
-2022-04-19 21:30:10.594  INFO 1 --- [           main] org.apache.catalina.core.StandardEngine  : Starting Servlet engine: [Apache Tomcat/9.0.58]
-2022-04-19 21:30:10.729  INFO 1 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
-2022-04-19 21:30:12.395  INFO 1 --- [           main] mstc.cloud.worker.WorkerApplication      : Started WorkerApplication in 5.964 seconds (JVM running for 7.381)
-2022-04-19 21:30:34.973  INFO 1 --- [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
-2022-04-19 21:30:35.234  INFO 1 --- [nio-8080-exec-1] m.c.worker.controller.WorkerController   : Received request to processRequest(image=mstc/python-test, jobName=test-job, timeOut=0, inputBucketUrl=http://localhost:9000/test-bucket, outputBucketUrl=null)
-2022-04-19 21:30:35.245  INFO 1 --- [nio-8080-exec-1] m.c.w.service.WorkerRequestProcessor     : Submitting job: test-job
-2022-04-19 21:30:36.154 DEBUG 1 --- [nio-8080-exec-1] mstc.cloud.worker.job.K8sJobRunner       : Creating job "test-job-99c0812e-03c5-459c-95db-dd95251b14d0" in namespace mstc-dev.
-{
-  "apiVersion" : "batch/v1",
-  "kind" : "Job",
-  "metadata" : {
-    "labels" : {
-      "foo" : "bar"
-    },
-    "name" : "test-job-f0f43e62-3f40-422c-a199-346390dcc37c"
-  },
-  "spec" : {
-    "template" : {
-      "spec" : {
-        "containers" : [ {
-          "env" : [ {
-            "name" : "INPUT_BUCKET_URL",
-            "value" : "http://localhost:9000/test-bucket"
-          } ],
-          "image" : "mstc/python-test",
-          "imagePullPolicy" : "IfNotPresent",
-          "name" : "test-job"
-        } ],
-        "restartPolicy" : "Never"
-      }
-    },
-    "ttlSecondsAfterFinished" : 30
-  }
-}
-2022-04-19 21:30:36.995  INFO 1 --- [nio-8080-exec-1] mstc.cloud.worker.job.K8sJobRunner       : Job "test-job-99c0812e-03c5-459c-95db-dd95251b14d0" is created in namespace mstc-dev, timeout of 15 minutes, waiting for result...
-2022-04-19 21:30:46.531  INFO 1 --- [nio-8080-exec-1] mstc.cloud.worker.job.K8sJobRunner       : Job test-job-d307cd41-b017-48f0-8e53-19302717f6dd duration: 10375 ms
+2022-05-06 16:46:10.766  INFO 1 --- [           main] mstc.cloud.worker.WorkerApplication      : Starting WorkerApplication using Java 11.0.14 on mstc-cloud-worker-6ff966fdf9-rmp5s with PID 1 (/app.jar started by root in /)
+2022-05-06 16:46:10.774 DEBUG 1 --- [           main] mstc.cloud.worker.WorkerApplication      : Running with Spring Boot v2.6.4, Spring v5.3.16
+2022-05-06 16:46:10.775  INFO 1 --- [           main] mstc.cloud.worker.WorkerApplication      : The following 1 profile is active: "local"
+2022-05-06 16:46:13.794  INFO 1 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port(s): 8080 (http)
+2022-05-06 16:46:13.816  INFO 1 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2022-05-06 16:46:13.816  INFO 1 --- [           main] org.apache.catalina.core.StandardEngine  : Starting Servlet engine: [Apache Tomcat/9.0.58]
+2022-05-06 16:46:13.956  INFO 1 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2022-05-06 16:46:13.956  INFO 1 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2906 ms
+2022-05-06 16:46:15.820  INFO 1 --- [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 13 endpoint(s) beneath base path '/actuator'
+2022-05-06 16:46:15.959 DEBUG 1 --- [           main] o.s.a.r.l.SimpleMessageListenerContainer : No global properties bean
+2022-05-06 16:46:16.011  INFO 1 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port(s): 8080 (http) with context path ''
+2022-05-06 16:46:16.013 DEBUG 1 --- [           main] o.s.a.r.l.SimpleMessageListenerContainer : Starting Rabbit listener container.
+2022-05-06 16:46:16.014  INFO 1 --- [           main] o.s.a.r.c.CachingConnectionFactory       : Attempting to connect to: mstc-work-queue:5672
+2022-05-06 16:46:16.153  INFO 1 --- [           main] o.s.a.r.c.CachingConnectionFactory       : Created new connection: connectionFactory#6f70f32f:0/SimpleConnection@bcb09a6 [delegate=amqp://guest@10.98.6.2:5672/, localPort= 51542]
+2022-05-06 16:46:16.160 DEBUG 1 --- [           main] o.s.amqp.rabbit.core.RabbitAdmin         : Initializing declarations
+2022-05-06 16:46:16.178 DEBUG 1 --- [           main] o.s.a.r.c.CachingConnectionFactory       : Creating cached Rabbit Channel from AMQChannel(amqp://guest@10.98.6.2:5672/,1)
+2022-05-06 16:46:16.195 DEBUG 1 --- [           main] o.s.amqp.rabbit.core.RabbitTemplate      : Executing callback RabbitAdmin$$Lambda$907/0x000000010059d840 on RabbitMQ Channel: Cached Rabbit Channel: AMQChannel(amqp://guest@10.98.6.2:5672/,1), conn: Proxy@648ee871 Shared Rabbit Connection: SimpleConnection@bcb09a6 [delegate=amqp://guest@10.98.6.2:5672/, localPort= 51542]
+2022-05-06 16:46:16.195 DEBUG 1 --- [           main] o.s.amqp.rabbit.core.RabbitAdmin         : declaring Exchange 'mstc.exchange'
+2022-05-06 16:46:16.201 DEBUG 1 --- [           main] o.s.amqp.rabbit.core.RabbitAdmin         : declaring Queue 'mstc.queue.work'
+2022-05-06 16:46:16.209 DEBUG 1 --- [           main] o.s.amqp.rabbit.core.RabbitAdmin         : Binding destination [mstc.queue.work (QUEUE)] to exchange [mstc.exchange] with routing key [mstc.queue.work]
+2022-05-06 16:46:16.214 DEBUG 1 --- [           main] o.s.amqp.rabbit.core.RabbitAdmin         : Declarations finished
+2022-05-06 16:46:16.223 DEBUG 1 --- [ntContainer#0-1] o.s.amqp.rabbit.core.RabbitTemplate      : Executing callback RabbitAdmin$$Lambda$912/0x000000010059cc40 on RabbitMQ Channel: Cached Rabbit Channel: AMQChannel(amqp://guest@10.98.6.2:5672/,1), conn: Proxy@648ee871 Shared Rabbit Connection: SimpleConnection@bcb09a6 [delegate=amqp://guest@10.98.6.2:5672/, localPort= 51542]
+2022-05-06 16:46:16.228 DEBUG 1 --- [ntContainer#0-1] o.s.a.r.listener.BlockingQueueConsumer   : Starting consumer Consumer@27f1bbe0: tags=[[]], channel=null, acknowledgeMode=AUTO local queue size=0
+2022-05-06 16:46:16.245 DEBUG 1 --- [pool-1-thread-3] o.s.a.r.listener.BlockingQueueConsumer   : ConsumeOK: Consumer@27f1bbe0: tags=[[amq.ctag-rua_ZwOHPn3JdLtttEepNA]], channel=Cached Rabbit Channel: AMQChannel(amqp://guest@10.98.6.2:5672/,1), conn: Proxy@648ee871 Shared Rabbit Connection: SimpleConnection@bcb09a6 [delegate=amqp://guest@10.98.6.2:5672/, localPort= 51542], acknowledgeMode=AUTO local queue size=0
+2022-05-06 16:46:16.245 DEBUG 1 --- [ntContainer#0-1] o.s.a.r.listener.BlockingQueueConsumer   : Started on queue 'mstc.queue.work' with tag amq.ctag-rua_ZwOHPn3JdLtttEepNA: Consumer@27f1bbe0: tags=[[]], channel=Cached Rabbit Channel: AMQChannel(amqp://guest@10.98.6.2:5672/,1), conn: Proxy@648ee871 Shared Rabbit Connection: SimpleConnection@bcb09a6 [delegate=amqp://guest@10.98.6.2:5672/, localPort= 51542], acknowledgeMode=AUTO local queue size=0
+2022-05-06 16:46:16.262  INFO 1 --- [           main] mstc.cloud.worker.WorkerApplication      : Started WorkerApplication in 7.098 seconds (JVM running for 8.632)
+
 ```
 Then run `pytest`.
 
@@ -257,7 +243,30 @@ Optionally you can submit:
 * If the `timeOut` property is not provided, the default is 15 minutes.
 * If the `output bucket` is not provided, the input bucket is used.
 
-NOTE: Going forward, the image name may also include a registry hostname. 
+NOTE: Going forward, the image name may also include a registry hostname.
+
+## Running ASTROS
+There is a test case included in the project that will run ASTROS. However, you'll need to build the Docker image for ASTROS from the `mstc-astros-eap` project, using rthe `job` branch. Once you've built the image in the `mstc-astros-eap` project using `make dist`, you'll see the following after you run `docker images`
+
+```
+mstc/astros-eap-12.5                                      0.3.0
+```
+
+There is a fixture in `conftest.py` that checks if this specific image exists before running the test case. If the image exists, the test case uploads `AstrosModalAGARD445.bdf` and `AstrosModalAGARD445.dat` to the `astros.inputs` bucket and submits:
+
+```json
+{"image": "mstc/astros-eap-12.5:0.3.0",
+ "jobName": "astros-job",
+ "inputBucket" : "astros.inputs",
+ "outputBucket" : "astros.outputs"
+}
+```
+
+Once complete the output bucket contains 2 files:
+
+1. `AstrosModalAGARD445.out.txt`
+2. The job's log file
+
 
 
 
