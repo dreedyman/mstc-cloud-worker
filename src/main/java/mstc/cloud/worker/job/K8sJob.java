@@ -57,7 +57,7 @@ public class K8sJob {
                 .addToLabels("app.kubernetes.io/created-by", "mstc-cloud-worker")
                 .endMetadata()
                 .withNewSpec()
-                .withTtlSecondsAfterFinished(60)
+                .withTtlSecondsAfterFinished(30)
                 //.withActiveDeadlineSeconds()
                 .withNewTemplate()
                 .withNewSpec()
