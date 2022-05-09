@@ -14,8 +14,6 @@ public class JobMetricsTest {
 
     @Test
     public void setJobTiming() throws Exception {
-        File dir = new File(System.getProperty("test.resources.dir"));
-        File log = new File(dir, "example.log");
         JobMetrics jobMetrics = new JobMetrics();
         Instant submitted = Instant.now();
         jobMetrics.setSubmitted(submitted);
