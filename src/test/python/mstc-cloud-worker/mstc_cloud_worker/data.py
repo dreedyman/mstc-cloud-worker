@@ -52,6 +52,7 @@ class Data:
     
     
     def delete(self, bucket):
-        for item in self._client.list_objects(bucket,recursive=True):
-            name = item.object_name
-            self._client.remove_object(bucket, item.object_name)
+        if self._client.bucket_exists(bucket):
+            for item in self._client.list_objects(bucket,recursive=True):
+                name = item.object_name
+                self._client.remove_object(bucket, item.object_name)
