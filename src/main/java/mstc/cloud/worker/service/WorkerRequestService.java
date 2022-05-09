@@ -48,7 +48,6 @@ public class WorkerRequestService {
     private WorkerRequestProcessor workerRequestProcessor;
     private static final Logger logger = LoggerFactory.getLogger(WorkerRequestService.class);
 
-    //@RabbitListener(queues = "${spring.rabbitmq.queue.work}")
     @RabbitListener(queues = "#{workQueue.name}")
     public String receiveMessage(Message message) throws Exception {
         String body = new String(message.getBody(), StandardCharsets.UTF_8);
