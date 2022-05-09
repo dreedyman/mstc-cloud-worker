@@ -50,16 +50,9 @@ import static org.junit.Assert.assertNotNull;
 @RunWith(SpringRunner.class)
 @SpringBootTest
 public class WorkerRequestServiceTest {
-    @Value("${minio.host}")
-    private String host;
-    @Value("${minio.port}")
-    private String port;
-    @Value("${minio.password}")
-    private String password;
-    @Value("${minio.user}")
-    private String user;
-    @Value("${minio.bucket}")
-    private String bucket;
+    private final static String HOST = "localhost";
+    private final static String PORT = "9000";
+    private final static String IN_BUCKET = "test.in.bucket";
     @Autowired
     private RequestSender requestSender;
 
@@ -78,24 +71,24 @@ public class WorkerRequestServiceTest {
 
     @Before
     public  void setup() throws Exception {
-        endpoint = String.format("http://%s:%s", host, port);
+        endpoint = String.format("http://%s:%s", HOST, PORT);
         check(new MinIOCheck());
         check(new RabbitMQCheck());
         File testFileDir = new File(System.getProperty("test.data.dir"));
-        inputItems = dataService.upload(bucket, testFileDir.listFiles());
+        inputItems = dataService.upload(IN_BUCKET, testFileDir.listFiles());
         inputItems.add("foo");
         inputItems.add("bar");
     }
 
     @After
     public void cleanup() throws Exception {
-        if (dataService.getMinioClient().bucketExists(BucketExistsArgs.builder().bucket(bucket).build())) {
+        if (dataService.getMinioClient().bucketExists(BucketExistsArgs.builder().bucket(IN_BUCKET).build())) {
             Iterable<Result<Item>> results = dataService.getMinioClient()
-                                                        .listObjects(ListObjectsArgs.builder().bucket(bucket).build());
+                                                        .listObjects(ListObjectsArgs.builder().bucket(IN_BUCKET).build());
             for (Result<Item> result : results) {
                 Item item = result.get();
                 dataService.getMinioClient()
-                           .removeObject(RemoveObjectArgs.builder().bucket(bucket).object(item.objectName()).build());
+                           .removeObject(RemoveObjectArgs.builder().bucket(IN_BUCKET).object(item.objectName()).build());
             }
         }
         //dataService.getMinioClient().removeBucket(RemoveBucketArgs.builder().bucket(bucket).build());
@@ -113,16 +106,6 @@ public class WorkerRequestServiceTest {
                                       "test.in.bucket",
                                       "test.out.bucket");
         requestSender.sendAndReceive(request);
-    }
-
-    @Test
-    @Ignore
-    public void download() throws Exception {
-        File downloadTo = new File(System.getProperty("test.download.dir"));
-        downloadTo.mkdirs();
-        List<File> downloaded = dataService.getAll(downloadTo, bucket);
-        //List<File> downloaded = dataService.download(downloadTo, inputUrls.toArray(new URL[0]));
-        assertEquals("expected 2 files", 2, downloaded.size());
     }
 
     interface Check {
