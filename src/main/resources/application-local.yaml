@@ -14,3 +14,9 @@ logging:
         amqp: DEBUG
 
     mstc: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
