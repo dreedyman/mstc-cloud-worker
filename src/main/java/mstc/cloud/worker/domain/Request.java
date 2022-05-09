@@ -69,6 +69,13 @@ public class Request {
         return this;
     }
 
+    public String getOutputBucket() {
+        if (outputBucket == null) {
+            return inputBucket;
+        }
+        return outputBucket;
+    }
+
 
 
 }
