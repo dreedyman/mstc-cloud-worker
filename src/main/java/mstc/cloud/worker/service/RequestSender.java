@@ -42,12 +42,6 @@ public class RequestSender {
     @Inject
     private WorkerConfig workerConfig;
     private final RabbitTemplate rabbitTemplate;
-    /*@Value("${spring.rabbitmq.exchange}")
-    private String exchange;
-    @Value("${spring.rabbitmq.routingKey}")
-    private String routingKey;*/
-    @Autowired
-    private Queue responseQueue;
     @Autowired
     private Queue workQueue;
     @Inject
@@ -76,16 +70,18 @@ public class RequestSender {
         Message requestMessage = MessageBuilder
                 .withBody(requestJson.getBytes())
                 .setContentType(MessageProperties.CONTENT_TYPE_JSON)
+                .setCorrelationId(UUID.randomUUID().toString())
+                .setReplyTo(workQueue.getName())
                 .build();
 
-        UUID correlationId = UUID.randomUUID();
+        /*UUID correlationId = UUID.randomUUID();
         MessagePostProcessor messagePostProcessor = message -> {
             MessageProperties messageProperties
                     = message.getMessageProperties();
             messageProperties.setReplyTo(workQueue.getName());
             messageProperties.setCorrelationId(correlationId.toString());
             return message;
-        };
+        };*/
 
         //rabbitTemplate.convertAndSend(exchange, routingKey, requestMessage, messagePostProcessor);
         Object result = rabbitTemplate.convertSendAndReceive(workerConfig.getExchange(),
