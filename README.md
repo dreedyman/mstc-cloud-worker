@@ -1,28 +1,31 @@
 # MSTC Cloud Worker
 This project provides a Worker that consumes work requests from a queue, submits Kubernetes jobs and writes responses back. The worker is written in Java, a test client has been provided with Python in `src/test/python`. This is an embedded project that uses `poetry`.
 
-The `cloud-worker` is a Spring Boot service, and also uses the [Fabric8's Java Kubernetes Client](https://github.com/fabric8io/kubernetes-client).
+The `cloud-worker` is a Spring Boot service, and also uses the [Fabric8's Java Kubernetes Client](https://github.com/fabric8io/kubernetes-client) to dynamically create Kubernetes Jobs
 
 ## Overview
 ![](assets/arch.png)
 
-**Client perform the following:**
+**Client performs the following:**
 
 1. Uploads input data to a MinIO `input bucket`
-2. Submits request to RabbitMQ, providing the `image` name, `job name`, `input-bucket`, optional `output-bucket` (if not proivided the `input bucket` will be used to send output(s)).
+2. Submits request to RabbitMQ, providing the `image` name, `job name`, `input-bucket`, optional `output-bucket` (if not provided the `input bucket` will be used).
 
 **Cloud-Worker then:**
 
 1. Consumes work
-2. Unwraps request, obtains the `image` to run, a name for the `job`, an optional `timeout`, the `input bucket` and optional `output bucket`. 
+2. Unwraps request, obtains the `image` to run, a name for the `job`, an optional `timeout` (defaults to 15 minutes), the `input bucket` and optional `output bucket`. 
 3. These values are then configured into a Kubernetes Job. The `input bucket` and optional `output bucket` are set as values for environment variables `INPUT_BUCKET` and `OUTPUT_BUCKET` respectively.
-4. The Job is submitted and observed. Once complete the output of the Job is provided.
+4. The Job is submitted and observed. NOTE: The Job is configured to use `IfNotPresent`for the image pull policy.
+5. Once complete, the `cloud-worker` captures the job's log file, and writes it to the `output bucket`.
 
 **K8S Job**
 
 1. Is expected to download all files in the `input bucket`
 2. Do it's thing, and
-3. Upload all files to the `output bucket`. Once the client receives notification, it can then go pick up all files. NOTE: If there are errors that the K8s Job runs into, they will be put into files and copied to the `output bucket` as well. Should be noted that the `MINIO_SERVICE_HOST` and `MINIO_SERVICE_PORT` environment variables will have been set into the environment of the K8s job as well.
+3. Upload all files to the `output bucket`. Once the client receives notification, it can then go pick up all files. NOTE: The EAP (Job) determines what files to upload. If there are errors that the K8s Job runs into, they will be put into files and copied to the `output bucket` as well. Should be noted that the `MINIO_SERVICE_HOST` and `MINIO_SERVICE_PORT` environment variables will have been set into the environment of the K8s job as well.
+
+The Kubernetes Job is configured for automatic cleanup after it is finished as described [here](https://kubernetes.io/docs/concepts/workloads/controllers/ttlafterfinished/). The TTL (time to live) mechanism is set for 30 seconds.
 
 
 ## Setting up Kubernetes
@@ -39,7 +42,7 @@ This will also setup the `mstc-dev` namespace (if not already created). If you w
 TODO: There is still work to be done to setup a secret to hold your username and password.
 
 ## Deploying Services to Kubernetes
-We'll need to deploy both RabbitMQ and MinIO to Kubernetes, as well as the `mstc-cloud-worker`. Charts have been setup for in the charts directory.
+We'll need to deploy both RabbitMQ and MinIO to Kubernetes, as well as the `mstc-cloud-worker`. Charts have been setup in the charts directory.
 
 ```
 charts
@@ -63,7 +66,7 @@ charts
     │   └── service.yaml
     └── values.yaml
 ```
-You'll notice a 3rd level `charts` directory. This is for the dependencies of the `mstc-cloud-worker`. They are configured as dependencies, and if you lok into the `mstc-cloud-worker`'s `Chart.yaml` file you'll see:
+You'll notice a 2nd level `charts` directory. MinIO and RabbitMQ are configured as dependencies of the `mstc-cloud-worker`. If you look into the `mstc-cloud-worker`'s `Chart.yaml` file you'll see:
 
 ```
 dependencies:
@@ -166,7 +169,7 @@ Forwarding from 127.0.0.1:9000 -> 9000
 Forwarding from [::1]:9000 -> 9000
 ```
 
-
+If you want to open the MinIO admin, you'll need to map port `9001` as well.
 
 ## Running the Python Client
 The Python client is a test case. Just run `pytest`. However, you first need to build the test Docker image. To do that:
@@ -252,7 +255,9 @@ Optionally you can submit:
 ```
 
 * If the `timeOut` property is not provided, the default is 15 minutes.
-* If the `output bucket` is not provied, the input bucket is used.
+* If the `output bucket` is not provided, the input bucket is used.
+
+NOTE: Going forward, the image name may also include a registry hostname. 
 
 
 
