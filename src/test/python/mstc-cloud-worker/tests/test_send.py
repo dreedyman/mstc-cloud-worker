@@ -19,6 +19,7 @@ def test_send(client, data, inputs, cleanup, request):
     print("Send...")
     result = client.send(job_request)
     content = result["result"]
+    print()
     for line in content.split("\n"):
         print(line)
     
@@ -28,8 +29,8 @@ def test_send(client, data, inputs, cleanup, request):
     downloaded = data.download("test.inputs", files_dir)
     assert len(downloaded) == 3    
 
-"""    
-def test_astros(client, data, inputs):
+
+def test_astros(client, data, inputs, astros):
     items = data.upload("astros.inputs", inputs)
     assert items is not None
     assert len(items) == 2
@@ -40,6 +41,7 @@ def test_astros(client, data, inputs):
                    }    
     result = client.send(job_request)
     content = result["result"]
+    print()
     for line in content.split("\n"):
         print(line)
     
@@ -47,7 +49,6 @@ def test_astros(client, data, inputs):
     files_dir = os.path.join(path, "scratch")
         
     downloaded = data.download("astros.outputs", files_dir)
-    assert len(downloaded) == 1
+    assert len(downloaded) == 2
     
-"""
 
