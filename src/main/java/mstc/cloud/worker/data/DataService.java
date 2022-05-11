@@ -16,21 +16,18 @@
  *
  */
 
-package mstc.cloud.worker.service;
+package mstc.cloud.worker.data;
 
 import io.minio.*;
 import io.minio.messages.Item;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -107,10 +104,12 @@ public class DataService {
     public List<File> getAll(File downloadTo, String bucket) throws Exception {
         getMinioClient();
         List<File> downloaded = new ArrayList<>();
-        Iterable<Result<Item>> results = minioClient.listObjects(ListObjectsArgs.builder().bucket(bucket).build());
-        for (Result<Item> result : results) {
-            Item item = result.get();
-            downloaded.add(get(downloadTo, bucket, item.objectName()));
+        if (minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucket).build())) {
+            Iterable<Result<Item>> results = minioClient.listObjects(ListObjectsArgs.builder().bucket(bucket).build());
+            for (Result<Item> result : results) {
+                Item item = result.get();
+                downloaded.add(get(downloadTo, bucket, item.objectName()));
+            }
         }
         return downloaded;
     }
