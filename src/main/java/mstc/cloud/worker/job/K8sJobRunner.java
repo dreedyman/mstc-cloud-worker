@@ -7,6 +7,8 @@ import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.concurrent.CountDownLatch;
@@ -15,10 +17,12 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author dreedy
  */
+@Service
 public class K8sJobRunner {
     private KubernetesClient client;
     private static final Logger logger = LoggerFactory.getLogger(K8sJobRunner.class);
-    private final ObjectMapper mapper = new ObjectMapper();
+    @Autowired
+    private ObjectMapper mapper;
 
     public void setClient(KubernetesClient client) {
         this.client = client;
@@ -42,7 +46,12 @@ public class K8sJobRunner {
                                       jobName,
                                       namespace,
                                       k8sJob.getTimeOut()));
-            output = watch(client, createdJob, k8sJob);
+            try {
+                output = watch(client, createdJob, k8sJob);
+            } catch (Exception e) {
+                logger.error("Could not complete the watch for job: " + jobName, e);
+                output = e.getClass().getName() + ": " + e.getMessage();
+            }
 
         } finally {
             client.close();
@@ -69,7 +78,14 @@ public class K8sJobRunner {
         if (!returned) {
             throw new JobException("Job timed out");
         }
-        return client.batch().v1().jobs().inNamespace(namespace).withName(job.getMetadata().getName()).getLog();
+        String output;
+        try {
+            output = client.batch().v1().jobs().inNamespace(namespace).withName(job.getMetadata().getName()).getLog();
+        } catch(KubernetesClientException e) {
+            output = "Failed getting log, KubernetesClientException: " + e.getMessage();
+            logger.warn(output);
+        }
+        return output;
     }
 
     private void logJobCreation(String jobName, String namespace, Job job) {
