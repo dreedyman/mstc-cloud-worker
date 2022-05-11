@@ -53,7 +53,6 @@ bootRun {
     sourceResources sourceSets.main
     systemProperty 'spring.profiles.active', System.getProperty('spring.profiles.active') ?: 'local'
     systemProperty 'user.timezone', System.getProperty('user.timezone') ?: 'UTC'
-    environment = env()
 }
 
 docker {
@@ -82,25 +81,35 @@ task helmUninstall() {
     }
 }
 
-task helm() {
-    dependsOn(helmUninstall, helmInstall)
+def composeOut(String action) {
+    project.buildDir.mkdirs()
+    new File("${project.buildDir.path}/docker-compose-${action}.out")
+}
+
+def composeExec(String action) {
+    def command = ["docker-compose", "-f", "${project.projectDir.path}/src/test/resources/docker-compose.yml", "$action"]
+    def pb = new ProcessBuilder(command as String[])
+    pb.redirectOutput(ProcessBuilder.Redirect.appendTo(composeOut(action))).redirectErrorStream(true).start()
+}
+
+task composeUp() {
+    doLast {
+        composeExec("up")
+    }
+}
+
+task composeDown() {
+    doLast {
+        composeExec("down")
+    }
 }
 
 clean.dependsOn(helmUninstall)
 
-def env() {
-    ["MINIO_SERVICE_HOST": "localhost",
-     "MINIO_SERVICE_PORT": "9000",
-     "MINIO_ROOT_USER": "minioadmin",
-     "MINIO_PASSWORD": "minioadmin",
-     "WORK_QUEUE_HOST": "localhost",
-     "WORK_QUEUE_PORT": "5672",
-     "WORK_QUEUE_USER": "guest",
-     "WORK_QUEUE_PASS": "guest"]
-}
-
 test {
-    //dependsOn composeUp
+    dependsOn composeUp
+    finalizedBy composeDown
+
     environment "MINIO_SERVICE_HOST", "localhost"
     environment "MINIO_SERVICE_PORT", "9000"
     environment "WORK_QUEUE_HOST", "localhost"
