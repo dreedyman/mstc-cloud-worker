@@ -21,11 +21,13 @@ package mstc.cloud.worker.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import lombok.Setter;
+import mstc.cloud.worker.data.DataService;
 import mstc.cloud.worker.domain.Request;
 import mstc.cloud.worker.job.K8sJob;
 import mstc.cloud.worker.job.K8sJobRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.inject.Inject;
@@ -41,6 +43,8 @@ import java.util.Map;
 @Service
 @SuppressWarnings("unused")
 public class WorkerRequestProcessor {
+    @Autowired
+    private K8sJobRunner jobRunner;
     @Setter
     private String namespace;
     @Inject
@@ -49,28 +53,27 @@ public class WorkerRequestProcessor {
     private DataService dataService;
     private static final Logger logger = LoggerFactory.getLogger(WorkerRequestProcessor.class);
 
-
     public String processRequest(Request request) throws Exception {
-        return processRequest(request, null);
+        K8sJob k8sJob = createJob(request);
+        processJob(k8sJob, null, request.getOutputBucket());
+        return "Job " + k8sJob.getJobNameUnique() + " complete.";
     }
 
-    String processRequest(Request request, KubernetesClient client) throws Exception {
-        K8sJob k8sJob = createJob(request);
-        K8sJobRunner jobRunner = new K8sJobRunner();
+    String processJob(K8sJob k8sJob, KubernetesClient client, String bucket) throws Exception {
         jobRunner.setClient(client);
         logger.info("Submitting job: " + k8sJob.getJobNameUnique());
         String output = jobRunner.submit(k8sJob);
         logger.info("Result:\n" + output);
-        writeLogAndSend(output, k8sJob.getJobName() + ".log", request);
-        return "Job " + k8sJob.getJobNameUnique() + " complete.";
+        writeLogAndSend(output, k8sJob.getJobName() + ".log", bucket);
+        return jobRunner.submit(k8sJob);
     }
 
-    private void writeLogAndSend(String content, String name, Request request)  {
-        String tmpDir = System.getenv("SCRATCH_DIR") == null ? System.getProperty("java.io.tmpdir") :
+    private void writeLogAndSend(String content, String name, String bucket)  {
+        String tmpDir = System.getenv("SCRATCH_DIR") == null ?
+                System.getProperty("java.io.tmpdir") :
                 System.getenv("SCRATCH_DIR");
 
         File log = new File(tmpDir, name);
-        String bucket = request.getOutputBucket();
         try {
             Files.write(log.toPath(), content.getBytes(StandardCharsets.UTF_8));
             dataService.upload(bucket, log);

@@ -34,7 +34,7 @@ public class WorkerControllerTest {
     private WorkerRequestProcessor workerRequestProcessor;
     @Autowired
     @InjectMocks
-    private WorkerController workerController;
+    private WorkerController sut;
     @LocalServerPort
     private int port;
     @Inject
@@ -45,7 +45,6 @@ public class WorkerControllerTest {
         MockitoAnnotations.openMocks(this);
         Map<String, String> response = new HashMap<>();
         response.put("result", "Happy path");
-        String s = mapper.writeValueAsString(response);
         when(workerRequestProcessor.processRequest(any(Request.class))).thenReturn(mapper.writeValueAsString(response));
     }
 
@@ -60,7 +59,7 @@ public class WorkerControllerTest {
     @Test
     public void exec() throws JsonProcessingException {
         Request request = new Request().inputBucket("red-rover/");
-        ResponseEntity<String> result = workerController.exec(request);
+        ResponseEntity<String> result = sut.exec(request);
         assertNotNull("Expected non-null", result);
         assertEquals("Expected 200, got: " + result.getStatusCode(),
                      HttpStatus.OK, result.getStatusCode());

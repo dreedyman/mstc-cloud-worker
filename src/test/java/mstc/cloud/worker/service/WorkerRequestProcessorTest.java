@@ -1,25 +1,35 @@
 package mstc.cloud.worker.service;
 
 import io.fabric8.kubernetes.api.model.*;
+import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import io.fabric8.kubernetes.client.*;
 import io.fabric8.kubernetes.client.server.mock.KubernetesServer;
-import junit.framework.AssertionFailedError;
+import mstc.cloud.worker.Util;
+import mstc.cloud.worker.data.DataService;
 import mstc.cloud.worker.domain.Request;
 import mstc.cloud.worker.job.K8sJob;
+import mstc.cloud.worker.job.K8sJobRunner;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import java.io.File;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.*;
 
@@ -29,23 +39,44 @@ import static org.junit.Assert.*;
 @RunWith(SpringRunner.class)
 @SpringBootTest
 public class WorkerRequestProcessorTest {
+    private static final String IN_BUCKET = "worker.request.processor.in.bucket";
+    private static final String OUT_BUCKET = "worker.request.processor.out.bucket";
+    private File downloadDir;
     @Autowired
+    private RabbitTemplate rabbitTemplate;
+    @Autowired
+    private DataService dataService;
+    @Mock
+    private K8sJobRunner jobRunner;
+    @Autowired
+    @InjectMocks
     private WorkerRequestProcessor sut;
     @Rule
     public KubernetesServer server = new KubernetesServer(true, false);
     private Request request;
 
     @Before
-    public void setup() {
+    public void setup() throws Exception {
         request = new Request("mstc/python-test:latest",
                               "test",
                               0,
-                              "in-bucket",
-                              "out-bucket");
+                              IN_BUCKET,
+                              OUT_BUCKET);
+        String downloadDirName = System.getProperty("test.download.dir");
+        downloadDir = new File(downloadDirName,
+                               WorkerRequestProcessorTest.class.getSimpleName().toLowerCase());
+        downloadDir.mkdirs();
+        Util.check(new Util.MinIOCheck());
+        //Util.check(new Util.RabbitMQCheck());
+    }
+
+    @After
+    public void clean() throws IOException {
+        Util.deleteDir(downloadDir);
     }
 
     @Test
-    public void createJob() throws Exception {
+    public void createJob() {
         K8sJob job = sut.createJob(request);
         assertNotNull(job);
         assertEquals(K8sJob.DEFAULT_TIMEOUT_MINUTES, job.getTimeOut());
@@ -53,26 +84,46 @@ public class WorkerRequestProcessorTest {
 
     @Test
     public void createAndRunJob() throws Exception {
-        K8sJob job = sut.createJob(request);
+        sut.setNamespace("test");
+        K8sJob k8sJob = sut.createJob(request);
+        Job job = new JobBuilder()
+                .withNewMetadata()
+                .withName(k8sJob.getJobNameUnique())
+                .addToLabels("job-name", k8sJob.getJobNameUnique())
+                .addToLabels("mstc-job", "check")
+                .endMetadata()
+                .build();
 
         server.expect().withPath("/apis/batch/v1/namespaces/test/jobs")
-              .andReturn(200, new JobBuilder()
-                      .withNewMetadata()
-                      .withName(job.getJobNameUnique())
-                      .addToLabels("job-name", job.getJobNameUnique())
-                      .addToLabels("mstc-job", "check")
-                      .endMetadata()
-                      .build()).always();
+              .andReturn(200, job).always();
 
-        /*server.expect().withPath("/apis/batch/v1/namespaces/test/jobs")
-              .andReturn(200, new JobListBuilder().build()).once();*/
+        String path = String.format("/%s?%s&%s&%s",
+                                    "api/v1/namespaces/test/pods",
+                                    "labelSelector=" + toUrlEncoded("job-name=" + k8sJob.getJobNameUnique()),
+                                    "allowWatchBookmarks=true",
+                                    "watch=true");
+
+        PodStatus podStatus = new PodStatus();
+        podStatus.setPhase("Succeeded");
+        Pod pod = new PodBuilder().withStatus(podStatus).build();
+
+        PodList podList = new PodListBuilder()
+                .withNewMetadata().endMetadata()
+                .withItems(pod).build();
 
         server.expect().get()
-              .withPath("/api/v1/namespaces/test/pods?labelSelector=" + toUrlEncoded("job-name=" + job.getJobNameUnique()))
-              .andReturn(200, new PodListBuilder().withItems(new PodBuilder().build()).build()).always();
+              .withPath(path)
+              .andReturn(200, podList).always();
+
+        server.expect().get().withPath("/apis/batch/v1/namespaces/test/jobs/" + k8sJob.getJobNameUnique())
+              .andReturn(200, job).always();
+
         KubernetesClient client = server.getClient();
-        sut.setNamespace("test");
-        sut.processRequest(request, client);
+        String output = sut.processJob(k8sJob, client, request.getOutputBucket());
+        assertNotNull(output);
+
+        dataService.getAll(downloadDir, OUT_BUCKET);
+        assertEquals(1, downloadDir.list().length);
     }
 
     private static String toUrlEncoded(String str) {
@@ -84,50 +135,5 @@ public class WorkerRequestProcessorTest {
         return null;
     }
 
-    @Test
-    public void example() throws InterruptedException {
-        KubernetesClient client = server.getClient();
 
-        final CountDownLatch deleteLatch = new CountDownLatch(1);
-        final CountDownLatch closeLatch = new CountDownLatch(1);
-
-        //CREATE
-        client.pods().inNamespace("ns1").create(new PodBuilder().withNewMetadata().withName("pod1").endMetadata().build());
-
-        //READ
-        PodList podList = client.pods().inNamespace("ns1").list();
-        assertNotNull(podList);
-        assertEquals(1, podList.getItems().size());
-
-        //WATCH
-        Watch watch = client.pods().inNamespace("ns1").withName("pod1").watch(new Watcher<Pod>() {
-            @Override
-            public void eventReceived(Watcher.Action action, Pod resource) {
-                switch (action) {
-                    case DELETED:
-                        deleteLatch.countDown();
-                        break;
-                    default:
-                        throw new AssertionFailedError(action.toString().concat(" isn't recognised."));
-                }
-            }
-
-            @Override
-            public void onClose(WatcherException cause) {
-                closeLatch.countDown();
-            }
-        });
-
-        //DELETE
-        client.pods().inNamespace("ns1").withName("pod1").delete();
-
-        //READ AGAIN
-        podList = client.pods().inNamespace("ns1").list();
-        assertNotNull(podList);
-        assertEquals(0, podList.getItems().size());
-
-        assertTrue(deleteLatch.await(1, TimeUnit.MINUTES));
-        watch.close();
-        assertTrue(closeLatch.await(1, TimeUnit.MINUTES));
-    }
 }
