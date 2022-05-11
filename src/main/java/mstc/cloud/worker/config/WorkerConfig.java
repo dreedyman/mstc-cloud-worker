@@ -122,11 +122,6 @@ public class WorkerConfig implements RabbitListenerConfigurer {
         return rabbitTemplate;
     }
 
-    /*@Bean
-    public AsyncRabbitTemplate asyncRabbitTemplate(RabbitTemplate rabbitTemplate){
-        return new AsyncRabbitTemplate(rabbitTemplate);
-    }*/
-
     @Bean
     public AmqpAdmin amqpAdmin() {
         return new RabbitAdmin(connectionFactory());
