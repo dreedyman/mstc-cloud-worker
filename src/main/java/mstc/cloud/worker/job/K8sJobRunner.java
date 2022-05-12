@@ -2,6 +2,8 @@ package mstc.cloud.worker.job;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.fabric8.kubernetes.api.model.ContainerStateWaiting;
+import io.fabric8.kubernetes.api.model.ContainerStatus;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.*;
@@ -28,7 +30,7 @@ public class K8sJobRunner {
         this.client = client;
     }
 
-    public String submit(K8sJob k8sJob) throws JobException {
+    public String submit(K8sJob k8sJob) {
         String namespace = k8sJob.getNamespace();
         JobMetrics jobMetrics = new JobMetrics();
         String output;
@@ -48,6 +50,9 @@ public class K8sJobRunner {
                                       k8sJob.getTimeOut()));
             try {
                 output = watch(client, createdJob, k8sJob);
+            } catch (JobException e) {
+                output = e.getClass().getName() + ": " + e.getMessage();
+                logger.warn("Problem running Job", e);
             } catch (Exception e) {
                 logger.error("Could not complete the watch for job: " + jobName, e);
                 output = e.getClass().getName() + ": " + e.getMessage();
@@ -65,10 +70,11 @@ public class K8sJobRunner {
         String namespace = k8sJob.getNamespace();
         logger.info("Watching job: " + k8sJob.getJobNameUnique());
         CountDownLatch countDownLatch = new CountDownLatch(1);
+        PodWatcher podWatcher = new PodWatcher(countDownLatch);
         client.pods()
               .inNamespace(namespace)
               .withLabel("job-name", k8sJob.getJobNameUnique())
-              .watch(new PodWatcher(countDownLatch));
+              .watch(podWatcher);
         boolean returned;
         try {
             returned = countDownLatch.await(k8sJob.getTimeOut(), TimeUnit.MINUTES);
@@ -79,11 +85,24 @@ public class K8sJobRunner {
             throw new JobException("Job timed out");
         }
         String output;
-        try {
-            output = client.batch().v1().jobs().inNamespace(namespace).withName(job.getMetadata().getName()).getLog();
-        } catch(KubernetesClientException e) {
-            output = "Failed getting log, KubernetesClientException: " + e.getMessage();
-            logger.warn(output);
+        if (podWatcher.podError() != null) {
+            output = podWatcher.podError.getMessage() + ", Reason: " + podWatcher.podError().getReason();
+            if (client.batch().v1().jobs().inNamespace(namespace).withName(job.getMetadata().getName()).delete()) {
+                logger.info("Deleted job " + k8sJob.getJobNameUnique());
+            } else {
+                logger.warn("Failed to delete job " + k8sJob.getJobNameUnique());
+            }
+        } else {
+            try {
+                output = client.batch().v1()
+                               .jobs()
+                               .inNamespace(namespace)
+                               .withName(job.getMetadata().getName())
+                               .getLog();
+            } catch (KubernetesClientException e) {
+                output = "Failed getting log, KubernetesClientException: " + e.getMessage();
+                logger.warn(output);
+            }
         }
         return output;
     }
@@ -109,6 +128,7 @@ public class K8sJobRunner {
 
     private static class PodWatcher implements Watcher<Pod> {
         CountDownLatch countDownLatch;
+        ContainerStateWaiting podError;
 
         public PodWatcher(CountDownLatch countDownLatch) {
             this.countDownLatch = countDownLatch;
@@ -131,9 +151,32 @@ public class K8sJobRunner {
                     countDownLatch.countDown();
                     break;
                 default:
-                    logger.info("Job phase: " + resource.getStatus().getPhase());
+                    StringBuilder stringBuilder = new StringBuilder();
+                    stringBuilder.append("Job phase: ").append(resource.getStatus().getPhase());
+                    for(ContainerStatus containerStatus : resource.getStatus().getContainerStatuses()) {
+                        if (containerStatus.getState() != null && containerStatus.getState().getWaiting() != null) {
+                            ContainerStateWaiting waiting = containerStatus.getState().getWaiting();
+
+                            if (waiting.getMessage() != null) {
+                                stringBuilder.append(", Message: ").append(waiting.getMessage());
+                            }
+                            if (waiting.getReason() != null) {
+                                stringBuilder.append(", Reason: ").append(waiting.getReason());
+                            }
+                            if (waiting.getReason().equals("ErrImagePull") ||
+                                    waiting.getReason().equals("CrashLoopBackOff")) {
+                                podError = containerStatus.getState().getWaiting();
+                                countDownLatch.countDown();
+                            }
+                        }
+                    }
+                    logger.info(stringBuilder.toString());
             }
 
+        }
+
+        ContainerStateWaiting podError() {
+            return podError;
         }
 
         @Override
