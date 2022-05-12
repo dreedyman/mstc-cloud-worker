@@ -53,19 +53,19 @@ public class WorkerRequestProcessor {
     private DataService dataService;
     private static final Logger logger = LoggerFactory.getLogger(WorkerRequestProcessor.class);
 
-    public String processRequest(Request request) throws Exception {
+    public String processRequest(Request request) {
         K8sJob k8sJob = createJob(request);
         processJob(k8sJob, null, request.getOutputBucket());
         return "Job " + k8sJob.getJobNameUnique() + " complete.";
     }
 
-    String processJob(K8sJob k8sJob, KubernetesClient client, String bucket) throws Exception {
+    String processJob(K8sJob k8sJob, KubernetesClient client, String bucket) {
         jobRunner.setClient(client);
         logger.info("Submitting job: " + k8sJob.getJobNameUnique());
         String output = jobRunner.submit(k8sJob);
         logger.info("Result:\n" + output);
-        writeLogAndSend(output, k8sJob.getJobName() + ".log", bucket);
-        return jobRunner.submit(k8sJob);
+        writeLogAndSend(output, k8sJob.getJobNameUnique() + ".log", bucket);
+        return output;
     }
 
     private void writeLogAndSend(String content, String name, String bucket)  {
