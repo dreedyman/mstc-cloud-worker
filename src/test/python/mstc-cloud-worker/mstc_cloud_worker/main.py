@@ -27,6 +27,6 @@ if __name__ == "__main__":
     time.sleep(5)
     print("host: " + host)
     print("port: " + port)
-    print("Wrote 5 items to " + endpoint +"/" + output_bucket)
+    print("SUCCESS")
     
         

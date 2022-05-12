@@ -20,15 +20,16 @@ def test_send(client, data, inputs, cleanup, request):
     result = client.send(job_request)
     content = result["result"]
     print()
-    for line in content.split("\n"):
-        print(line)
+    parts = content.split(" ")
+    job_unique_name = parts[1]     
+    print(job_unique_name)
     
     path = Path(os.path.dirname(__file__))
     files_dir = os.path.join(path, "scratch")
     print("Download...")
     downloaded = data.download("test.inputs", files_dir)
-    assert len(downloaded) == 3    
-
+    assert len(downloaded) == 3
+    assert succeeded(job_unique_name, files_dir, "SUCCESS")
 
 def test_astros(client, data, inputs, astros):
     items = data.upload("astros.inputs", inputs)
@@ -50,5 +51,21 @@ def test_astros(client, data, inputs, astros):
         
     downloaded = data.download("astros.outputs", files_dir)
     assert len(downloaded) == 2
+    assert succeeded("astros-job", files_dir, "SUCCESS")
+    
+    
+def succeeded(name, path, expected):
+    from os import listdir
+    from os.path import isfile, join
+    files = [f for f in listdir(path) if isfile(join(path, f))]
+    matched = False
+    for f in files:
+        if f.startswith(name):
+            file = os.path.join(path, f)
+            with open(file) as result:
+                if expected in result.read():
+                    matched = True
+    return matched
+         
     
 
