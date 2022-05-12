@@ -13,7 +13,7 @@ logging:
       springframework:
         amqp: DEBUG
 
-    mstc: DEBUG
+    mstc: INFO
 
 management:
   endpoints:
