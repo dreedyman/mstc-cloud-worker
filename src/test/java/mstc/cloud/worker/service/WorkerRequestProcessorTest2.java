@@ -4,16 +4,18 @@ import mstc.cloud.worker.Util;
 import mstc.cloud.worker.data.DataService;
 import mstc.cloud.worker.domain.Request;
 import mstc.cloud.worker.job.K8sJob;
-import mstc.cloud.worker.job.K8sJobRunner;
+import mstc.cloud.worker.job.JobRunner;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.io.File;
@@ -29,6 +31,7 @@ import static org.mockito.Mockito.when;
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest
+@DirtiesContext
 @SuppressWarnings("unused")
 public class WorkerRequestProcessorTest2 {
     private static final String IN_BUCKET = "worker.request.processor.in.bucket";
@@ -37,7 +40,7 @@ public class WorkerRequestProcessorTest2 {
     @Autowired
     private DataService dataService;
     @Mock
-    private K8sJobRunner jobRunner;
+    private JobRunner jobRunner;
     @Autowired
     @InjectMocks
     private WorkerRequestProcessor sut;
@@ -70,10 +73,6 @@ public class WorkerRequestProcessorTest2 {
         assertNotNull(output);
         dataService.getAll(downloadDir, OUT_BUCKET);
         assertEquals(1, downloadDir.list().length);
-    }
-
-    private void deleteDownloadDir() throws IOException {
-
     }
 
 }
