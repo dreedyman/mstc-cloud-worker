@@ -1,9 +1,20 @@
 # MSTC Cloud Worker
-This project provides a Worker that consumes work requests from a queue, submits Kubernetes jobs and writes responses back. The worker is written in Java, a test client has been provided with Python in `src/test/python`. This is an embedded project that uses `poetry`.
+This project provides a Worker that consumes work requests from a queue, submits Kubernetes jobs and writes responses back. The worker is written in Java, a test client has been provided with Python in `src/test/python`. The test client is is an embedded project that uses `poetry`, and can be found in the `src/test/python` directory.
 
-The `cloud-worker` is a Spring Boot service, and also uses the [Fabric8's Java Kubernetes Client](https://github.com/fabric8io/kubernetes-client) to dynamically create Kubernetes Jobs
+This document is organized as follows:
+
+* [Overview](#Overview)
+* [Setting up Kubernetes](#Setting up Kubernetes)
+* [Deploying Services to Kubernetes](#Deploying Services to Kubernetes)
+* [Running the Python Client](#Running the Python Client)
+* [Running ASTROS](#Running ASTROS)
+* [Running Cloud Worker Tests](#Running Cloud Worker Tests)
+
+
 
 ## Overview
+The `cloud-worker` is a Spring Boot service, and also uses the [Fabric8's Java Kubernetes Client](https://github.com/fabric8io/kubernetes-client) to dynamically create Kubernetes Jobs.
+
 ![](assets/arch.png)
 
 **Client performs the following:**
@@ -266,6 +277,10 @@ Once complete the output bucket contains 2 files:
 
 1. `AstrosModalAGARD445.out.txt`
 2. The job's log file
+
+
+## Running Cloud Worker Tests
+TODO
 
 
 
