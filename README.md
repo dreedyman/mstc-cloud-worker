@@ -5,7 +5,7 @@ This document is organized as follows:
 
 * [Overview](#Overview)
 * [Setting up Kubernetes](#setting-up-kubernetes)
-* [Deploying Services to Kubernetes](#deploying-services-to-kKubernetes)
+* [Deploying Services to Kubernetes](#deploying-services-to-kubernetes)
 * [Running the Python Client](#running-the-python-client)
 * [Running ASTROS](#running-astros)
 * [Running Cloud Worker Tests](#running-cloud-worker-tests)
