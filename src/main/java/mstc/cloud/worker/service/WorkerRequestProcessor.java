@@ -24,7 +24,7 @@ import lombok.Setter;
 import mstc.cloud.worker.data.DataService;
 import mstc.cloud.worker.domain.Request;
 import mstc.cloud.worker.job.K8sJob;
-import mstc.cloud.worker.job.K8sJobRunner;
+import mstc.cloud.worker.job.JobRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,7 +44,7 @@ import java.util.Map;
 @SuppressWarnings("unused")
 public class WorkerRequestProcessor {
     @Autowired
-    private K8sJobRunner jobRunner;
+    private JobRunner jobRunner;
     @Setter
     private String namespace;
     @Inject
@@ -63,7 +63,9 @@ public class WorkerRequestProcessor {
         jobRunner.setClient(client);
         logger.info("Submitting job: " + k8sJob.getJobNameUnique());
         String output = jobRunner.submit(k8sJob);
-        logger.info("Result:\n" + output);
+        if (logger.isDebugEnabled()) {
+            logger.debug("Result:\n" + output);
+        }
         writeLogAndSend(output, k8sJob.getJobNameUnique() + ".log", bucket);
         return output;
     }
