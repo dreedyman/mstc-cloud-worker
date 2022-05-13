@@ -114,4 +114,21 @@ public class DataService {
         return downloaded;
     }
 
+    public void delete(String bucket) throws Exception {
+        getMinioClient();
+        if (minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucket).build())) {
+            Iterable<Result<Item>> results = minioClient.listObjects(ListObjectsArgs.builder().bucket(bucket).build());
+            for (Result<Item> result : results) {
+                Item item = result.get();
+                minioClient.removeObject(RemoveObjectArgs.builder()
+                                                         .bucket(bucket)
+                                                         .object(item.objectName())
+                                                         .build());
+            }
+            minioClient.removeBucket(RemoveBucketArgs.builder()
+                                                     .bucket(bucket)
+                                                     .build());
+        }
+    }
+
 }
