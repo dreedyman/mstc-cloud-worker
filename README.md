@@ -4,11 +4,11 @@ This project provides a Worker that consumes work requests from a queue, submits
 This document is organized as follows:
 
 * [Overview](#Overview)
-* [Setting up Kubernetes](#Setting up Kubernetes)
-* [Deploying Services to Kubernetes](#Deploying Services to Kubernetes)
-* [Running the Python Client](#Running the Python Client)
-* [Running ASTROS](#Running ASTROS)
-* [Running Cloud Worker Tests](#Running Cloud Worker Tests)
+* [Setting up Kubernetes](#setting-up-kubernetes)
+* [Deploying Services to Kubernetes](#deploying-services-to-kKubernetes)
+* [Running the Python Client](#running-the-python-client)
+* [Running ASTROS](#running-astros)
+* [Running Cloud Worker Tests](#running-cloud-worker-tests)
 
 
 
