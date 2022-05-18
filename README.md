@@ -4,11 +4,13 @@ This project provides a Worker that consumes work requests from a queue, submits
 This document is organized as follows:
 
 * [Overview](#Overview)
+* [Building the project](#building-the-project)
 * [Setting up Kubernetes](#setting-up-kubernetes)
 * [Deploying Services to Kubernetes](#deploying-services-to-kubernetes)
 * [Running the Python Client](#running-the-python-client)
 * [Running ASTROS](#running-astros)
 * [Running Cloud Worker Tests](#running-cloud-worker-tests)
+* [Gradle Tasks](#gradle-tasks)
 
 
 
@@ -37,6 +39,32 @@ The `cloud-worker` is a Spring Boot service, and also uses the [Fabric8's Java K
 3. Uploads the files it produces as outputs to the `output bucket`. Once the client receives notification, it can then go pick up all files. NOTE: Should be noted that the `MINIO_SERVICE_HOST` and `MINIO_SERVICE_PORT` environment variables will have been set into the environment of the K8s job as well.
 
 The Kubernetes Job is configured for automatic cleanup after it is finished as described [here](https://kubernetes.io/docs/concepts/workloads/controllers/ttlafterfinished/). The TTL (time to live) mechanism is set for 30 seconds.
+
+###Dependencies
+For the Java project:
+
+* [Lombok](https://projectlombok.org/) is used to generate getters, setters, constructors and builder capabilities for some classes.
+* [Spring Boot](https://spring.io/projects/spring-boot) for stand alone RESTful application
+* [Spring AMQP](https://spring.io/projects/spring-amqp) for RabbitMQ support
+* [Fabric8's Java Kubernetes Client](https://github.com/fabric8io/kubernetes-client) to deploy, and observe Kubernetes jobs.
+* [Spring Actuator](https://docs.spring.io/spring-boot/docs/1.3.5.RELEASE/reference/html/production-ready-monitoring.html) for monitoring and management over HTTP
+* [Jackson](https://github.com/FasterXML/jackson) for JSON support
+* [MinIO Java Client](https://docs.min.io/docs/java-client-quickstart-guide)
+
+For the Python tester project:
+
+* [Pika](https://pypi.org/project/pika/) for AMQP Python support
+* [MinIO Python Client](https://docs.min.io/docs/python-client-quickstart-guide.html)
+
+
+## Building the project
+The project requires Java 11 and uses Gradle to build the project. Its recommended that you add [this](https://github.com/gdubw/gng) utility to your machine, it'll make it easier running `gradlew`.
+
+I also recommend using [sdkman](https://sdkman.io) to assist in managing Java versions. 
+
+To build the docker image run:
+
+`gw docker`
 
 
 ## Setting up Kubernetes
@@ -129,15 +157,17 @@ When you want to deploy this to Kubernetes, there are tasks in the build.gradle 
 * `helmInstall`
 * `helmUninstall`
 
-Running `gradle 
-
 If you want to install/unistall separately run the following:
 
 `helm (un)install mstc-cloud-worker charts/mstc-cloud-worker`
 
-Once you have deployed the project, you can get a view of whats running by looking at:
+Once you have deployed the project, you can get a view of whats running by either running:
 
 `kubectl get all -n mstc-dev`
+
+or
+
+`gw list`
 
 ```
 NNAME                                     READY   STATUS    RESTARTS   AGE
@@ -182,12 +212,32 @@ Forwarding from [::1]:9000 -> 9000
 
 If you want to open the MinIO admin, you'll need to map port `9001` as well.
 
+Custom Gradle task have been added and found in `gradle/k8shelper.gradle`. This file provides 2 custom tasks:
+
+`portForward` and `portForwardStop`.
+
+The `portForward` task is configured in the `build.gradle` file:
+
+```groovy
+portForward {
+    names.put("minio", 9000)
+    names.put("mstc-work-queue", 5672)
+    namespace = "mstc-dev"
+}
+```
+
+This tells `portForward` to look for pods that have names that start with `minio` and `mstc-work-queue`, and map the ports respectively.
+
+The `portForwardStop` task looks for a file that contains the pids of the `kubectl` processes that `portForward` task created, and kills those processes.
+
 ## Running the Python Client
-The Python client is a test case. Just run `pytest`. However, you first need to build the test Docker image. To do that:
+The Python client is a test case. Just run `pytest`. However, you first need to build the test Docker image. You can do that in one of two ways:
 
 1. cd to the `src/test/python/mstc-cloud-worker` directory
 2. Run `poetry shell`
 3. Run `make dist`. This will create a Docker image containing the `mstc_cloud_worker/main.py` file. That simple app grabs environment variables, logs some messages, sleeps for 5 seconds and returns.
+
+Simpler way is to run `./gw pytest`
 
 Before running `pytest` it is helpful to get a new terminal and follow the logs of the `mstc-cloud-worker`:
 
@@ -282,6 +332,22 @@ Once complete the output bucket contains 2 files:
 ## Running Cloud Worker Tests
 TODO
 
+## Gradle Tasks
+You can get the tasks for the project by running
+`gw tasks --all`
+
+Below is a summary of some of the custom tasks
+
+| Task Name | Description
+|-----------|-------------|
+| helmInstall | Installs helm charts
+| helmUninstall | Uninstalls helm charts
+| portForward | Runs kubectl port-forward for discovered services
+| portForwardStop | Destroys kubectl port-forward processes
+| docker | Creates docker image for the project
+| pytest | Runs pytest for the Python test client
+| makePythonDist | Creates Docker image for Python test client
+| list | Runs `kubectl -n mstc-dev get all`
 
 
 
