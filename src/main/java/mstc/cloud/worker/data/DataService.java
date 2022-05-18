@@ -36,9 +36,9 @@ import java.util.List;
  */
 @Service
 public class DataService {
-    @Value("${MINIO_SERVICE_HOST}")
+    @Value("${MINIO_SERVICE_HOST:localhost}")
     private String host;
-    @Value("${MINIO_SERVICE_PORT}")
+    @Value("${MINIO_SERVICE_PORT:9000}")
     private String port;
     @Value("${MINIO_ROOT_USER:minioadmin}")
     private String user;
