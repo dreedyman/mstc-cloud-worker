@@ -1,0 +1,100 @@
+import java.nio.charset.StandardCharsets
+
+/*buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "io.fabric8:kubernetes-client:5.12.2"
+        classpath "io.fabric8:kubernetes-model-core:5.12.2"
+    }
+}*/
+
+task portForward(type: PortForward) {
+    description = "Forwards ports for Kubernetes services"
+}
+
+task portForwardStop(type: PortForwardStop) {
+    description = "Forwards ports for Kubernetes services"
+}
+
+class PortForward extends DefaultTask {
+    @Input
+    def names = [:]
+    @Input @Optional
+    def namespace
+
+    @TaskAction
+    def forward() {
+        if (namespace == null) {
+            namespace = "mstc-dev"
+        }
+        File pidFile = new File(project.buildDir, "kubectl.pids.txt")
+        if (pidFile.exists()) {
+            pidFile.text = ''
+        }
+        int retryCount = 0
+        def namesNotFound = [:]
+        namesNotFound.putAll(names)
+        def pods = [:]
+        while (pods.size() < names.size() && retryCount < 10) {
+            def command = ["kubectl", "-n", namespace, "get", "pods"]
+            def pb = new ProcessBuilder(command as String[])
+            def process = pb.start()
+            Scanner input = new Scanner(process.getInputStream())
+            def result = []
+            while(input.hasNextLine())
+                result << input.nextLine()
+            process.waitFor()
+            result.each { podLine ->
+                names.each { name, port ->
+                    def parts = podLine.split(" ")
+                    if (podLine.contains(name) && podLine.contains("Running")) {
+                        pods.put(parts[0], port)
+                        namesNotFound.remove(name)
+                    }
+                }
+            }
+            Thread.sleep(1000)
+            retryCount++
+        }
+        if (namesNotFound.size() != 0) {
+            println("Failed to find all pods, missing; ${namesNotFound.keySet()}")
+            return
+        }
+        //println("pods: " + pods)
+        pods.each { podName, port ->
+            def forward = "$port:$port"
+            def pfCommand = ["kubectl", "-n", namespace, "port-forward", podName, forward]
+            def processBuilder = new ProcessBuilder(pfCommand as String[])
+            if (!project.buildDir.exists()) {
+                project.buildDir.mkdirs()
+            }
+            File outFile = new File(project.buildDir as File, "${podName}.out")
+            processBuilder.redirectOutput(ProcessBuilder.Redirect.appendTo(outFile)).redirectErrorStream(true)
+            def portForwardProcess = processBuilder.start()
+            pidFile.append(portForwardProcess.toHandle().pid() + "\n")
+            println("Started port-forward for $podName $forward")
+        }
+    }
+}
+
+class PortForwardStop extends DefaultTask {
+    @TaskAction
+    def stop() {
+        File pidFile = new File(project.buildDir, "kubectl.pids.txt")
+        if (!pidFile.exists()) {
+            println("No kubectl pid file")
+            return
+        }
+        pidFile.readLines().each { line ->
+            def command = ["kill", "-9", line]
+            println("Kill process $line")
+            ProcessBuilder pb = new ProcessBuilder(command as String[])
+            pb.start().waitFor()
+        }
+        pidFile.delete()
+    }
+
+
+}
