@@ -7,7 +7,7 @@ run: dist
 	docker run --rm $(IMAGE_NAME)
 
 clean:
-    docker rmi $(IMAGE_NAME) -f
+	docker rmi $(IMAGE_NAME) -f
 	
 .PHONY: clean
 	
