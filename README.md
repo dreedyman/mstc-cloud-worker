@@ -220,8 +220,8 @@ The `portForward` task is configured in the `build.gradle` file:
 
 ```groovy
 portForward {
-    names.put("minio", 9000)
-    names.put("mstc-work-queue", 5672)
+    names["minio"] = 9000
+    names["mstc-work-queue"] = 5672
     namespace = "mstc-dev"
 }
 ```
