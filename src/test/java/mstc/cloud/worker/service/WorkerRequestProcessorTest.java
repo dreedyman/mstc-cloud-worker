@@ -1,8 +1,6 @@
 package mstc.cloud.worker.service;
 
 import io.fabric8.kubernetes.api.model.*;
-import io.fabric8.kubernetes.api.model.batch.v1.Job;
-import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import io.fabric8.kubernetes.client.*;
 import io.fabric8.kubernetes.client.server.mock.KubernetesServer;
 import mstc.cloud.worker.Util;
@@ -67,8 +65,6 @@ public class WorkerRequestProcessorTest {
                                WorkerRequestProcessorTest.class.getSimpleName().toLowerCase());
         downloadDir.mkdirs();
         dataService.delete(OUT_BUCKET);
-        Util.check(new Util.MinIOCheck());
-        //Util.check(new Util.RabbitMQCheck());
     }
 
     @After

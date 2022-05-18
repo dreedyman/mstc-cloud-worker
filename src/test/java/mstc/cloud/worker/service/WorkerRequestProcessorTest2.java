@@ -59,7 +59,6 @@ public class WorkerRequestProcessorTest2 {
         downloadDir = new File(downloadDirName,
                                WorkerRequestProcessorTest2.class.getSimpleName().toLowerCase());
         downloadDir.mkdirs();
-        Util.check(new Util.MinIOCheck());
     }
 
     @After

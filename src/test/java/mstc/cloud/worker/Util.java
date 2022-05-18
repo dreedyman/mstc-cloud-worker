@@ -19,40 +19,4 @@ public class Util {
              .map(Path::toFile)
              .forEach(File::delete);
     }
-
-    public interface Check {
-        boolean check();
-    }
-
-    public static class MinIOCheck implements Check {
-        @Override
-        public boolean check() {
-            try {
-                URL url = new URL("http://localhost:9001");
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                connection.getResponseCode();
-                return true;
-            } catch (Exception e) {
-            }
-            return false;
-        }
-    }
-
-    public static void check(Check checker) throws Exception {
-        int retry = 0;
-        boolean online = false;
-        long t0 = System.currentTimeMillis();
-        while (!online) {
-            online = checker.check();
-            if(!online) {
-                retry++;
-                if (retry == 10) {
-                    throw new TimeoutException(checker.getClass().getSimpleName() + "failed");
-                }
-                Thread.sleep(1000);
-            } else {
-                System.out.println("Waited " + (System.currentTimeMillis() - t0) + " millis");
-            }
-        }
-    }
 }
