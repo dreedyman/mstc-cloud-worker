@@ -5,13 +5,14 @@
  * For more details take a look at the Java Libraries chapter in the Gradle
  * user guide available at https://docs.gradle.org/4.2/userguide/java_library_plugin.html
  */
-
 plugins {
     id 'org.springframework.boot' version '2.6.4'
     id 'io.spring.dependency-management' version '1.0.11.RELEASE'
     id "com.palantir.docker" version "0.32.0"
     id 'java'
 }
+
+apply from: file('gradle/k8shelper.gradle')
 
 version = '0.0.1'
 
@@ -25,7 +26,7 @@ ext {
 }
 
 repositories {
-    jcenter()
+    mavenCentral()
 }
 
 dependencies {
@@ -61,8 +62,7 @@ docker {
     buildArgs(['JAR_FILE': "${bootJar.archiveFileName.get()}"])
 }
 
-
-def helmExec(List<String> args) {
+static def helmExec(List<String> args) {
     def command = ["helm"]
     command.addAll(args)
     def process = new ProcessBuilder(command as String[]).inheritIO().start()
@@ -70,45 +70,31 @@ def helmExec(List<String> args) {
 }
 
 task helmInstall() {
+    description = "Installs project helm charts"
     doLast {
         helmExec(["install", "mstc-cloud-worker", "${project.projectDir.path}/charts/mstc-cloud-worker", "-n", "mstc-dev"])
     }
 }
 
-task helmUninstall() {
+task helmUninstall(dependsOn: portForwardStop) {
+    description = "Uninstalls project helm charts"
     doLast {
         helmExec(["uninstall", "mstc-cloud-worker", "-n", "mstc-dev"])
     }
 }
 
-def composeOut(String action) {
-    project.buildDir.mkdirs()
-    new File("${project.buildDir.path}/docker-compose-${action}.out")
+portForward {
+    names.put("minio", 9000)
+    names.put("mstc-work-queue", 5672)
+    namespace = "mstc-dev"
 }
-
-def composeExec(String action) {
-    def command = ["docker-compose", "-f", "${project.projectDir.path}/src/test/resources/docker-compose.yml", "$action"]
-    def pb = new ProcessBuilder(command as String[])
-    pb.redirectOutput(ProcessBuilder.Redirect.appendTo(composeOut(action))).redirectErrorStream(true).start()
-}
-
-task composeUp() {
-    doLast {
-        composeExec("up")
-    }
-}
-
-task composeDown() {
-    doLast {
-        composeExec("down")
-    }
-}
+//portForward.dependsOn helmInstall
 
 clean.dependsOn(helmUninstall)
 
 test {
-    dependsOn composeUp
-    finalizedBy composeDown
+    dependsOn helmInstall, portForward
+    finalizedBy helmUninstall
 
     environment "MINIO_SERVICE_HOST", "localhost"
     environment "MINIO_SERVICE_PORT", "9000"
@@ -122,6 +108,23 @@ test {
     systemProperty "test.resources.dir", "${project.projectDir.path}/src/test/resources"
 }
 
+task list(type: Exec) {
+    description = "Runs kubectl get all"
+    commandLine = ["kubectl", "-n", "mstc-dev", "get", "all"]
+}
+
+task makePythonDist(type: Exec) {
+    description = "Create Docker image for Python test client"
+    commandLine = ["make", "dist"]
+    workingDir new File(project.projectDir, "src/test/python/mstc-cloud-worker")
+}
+
+task pytest(type: Exec, dependsOn: [makePythonDist, helmInstall, portForward]) {
+    description = "Runs pytest for the Python test client"
+    commandLine = ["poetry", "run", "pytest"]
+    workingDir new File(project.projectDir, "src/test/python/mstc-cloud-worker")
+    finalizedBy portForwardStop
+}
 
 sourceCompatibility = JavaVersion.VERSION_11
 targetCompatibility = JavaVersion.VERSION_11
