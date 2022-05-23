@@ -56,12 +56,6 @@ bootRun {
     systemProperty 'user.timezone', System.getProperty('user.timezone') ?: 'UTC'
 }
 
-docker {
-    name "mstc/${project.name}:${project.version}"
-    files bootJar.archiveFile
-    buildArgs(['JAR_FILE': "${bootJar.archiveFileName.get()}"])
-}
-
 static def helmExec(List<String> args) {
     def command = ["helm"]
     command.addAll(args)
@@ -120,11 +114,19 @@ task makePythonDist(type: Exec) {
     workingDir new File(project.projectDir, "src/test/python/mstc-cloud-worker")
 }
 
+docker {
+    dependsOn(makePythonDist)
+    name "mstc/${project.name}:${project.version}"
+    files bootJar.archiveFile
+    buildArgs(['JAR_FILE': "${bootJar.archiveFileName.get()}"])
+}
+
 task pytest(type: Exec) {
     //dependsOn makePythonDist, helmInstall, portForward
     description = "Runs pytest for the Python test client"
     commandLine = ["poetry", "run", "pytest"]
     workingDir new File(project.projectDir, "src/test/python/mstc-cloud-worker")
+    standardOutput = new ByteArrayOutputStream()
     //finalizedBy helmUninstall
 }
 
