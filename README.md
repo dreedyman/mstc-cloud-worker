@@ -372,6 +372,8 @@ Spring Boot Actuator includes a number of additional features to help you monito
 
 To access the actuator the `8080` port needs to be accessible. Runnning the `portForward` task does that, or you can run `kubectl port-forward` manually.
 
+The examples below include use of a utility called [jq](https://stedolan.github.io/jq/), a command line JSON processor.
+
 An example of getting all metrics available follows:
 
 
@@ -457,6 +459,58 @@ Getting the numbver of cpus:
   ],
   "availableTags": []
 }
+```
+
+Getting details on the Rabbit MQ Listener:
+
+` curl http://localhost:8080/actuator/metrics/spring.rabbitmq.listener | jq`
+
+```json
+{
+  "name": "spring.rabbitmq.listener",
+  "description": "Spring RabbitMQ Listener",
+  "baseUnit": "seconds",
+  "measurements": [
+    {
+      "statistic": "COUNT",
+      "value": 3
+    },
+    {
+      "statistic": "TOTAL_TIME",
+      "value": 21.6401112
+    },
+    {
+      "statistic": "MAX",
+      "value": 6.9213616
+    }
+  ],
+  "availableTags": [
+    {
+      "tag": "result",
+      "values": [
+        "success"
+      ]
+    },
+    {
+      "tag": "exception",
+      "values": [
+        "none"
+      ]
+    },
+    {
+      "tag": "listener.id",
+      "values": [
+        "org.springframework.amqp.rabbit.RabbitListenerEndpointContainer#0"
+      ]
+    },
+    {
+      "tag": "queue",
+      "values": [
+        "mstc.queue.work"
+      ]
+    }
+  ]
+
 ```
 ## Gradle Tasks
 You can get the tasks for the project by running

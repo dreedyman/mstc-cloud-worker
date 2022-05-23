@@ -126,7 +126,6 @@ task pytest(type: Exec) {
     description = "Runs pytest for the Python test client"
     commandLine = ["poetry", "run", "pytest"]
     workingDir new File(project.projectDir, "src/test/python/mstc-cloud-worker")
-    standardOutput = new ByteArrayOutputStream()
     //finalizedBy helmUninstall
 }
 
