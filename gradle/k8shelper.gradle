@@ -43,13 +43,18 @@ class PortForward extends DefaultTask {
             def process = pb.start()
             Scanner input = new Scanner(process.getInputStream())
             def result = []
-            while(input.hasNextLine())
+            while (input.hasNextLine())
                 result << input.nextLine()
             process.waitFor()
             result.each { podLine ->
                 names.each { name, port ->
-                    def parts = podLine.split(" ")
-                    if (podLine.contains(name) && podLine.contains("Running")) {
+                    def parts = Arrays.stream(podLine.split(" "))
+                            .filter { e -> e.trim().length() > 0 }
+                            .toArray()
+                    String podName = parts[0] as String
+                    String status = parts[2] as String
+                    //println("$podName: $status")
+                    if (podName.startsWith(name) && status == "Running") {
                         pods.put(parts[0], port)
                         namesNotFound.remove(name)
                     }
@@ -63,19 +68,31 @@ class PortForward extends DefaultTask {
             return
         }
         //println("pods: " + pods)
-        pods.each { podName, port ->
-            def forward = "$port:$port"
-            def pfCommand = ["kubectl", "-n", namespace, "port-forward", podName, forward]
-            def processBuilder = new ProcessBuilder(pfCommand as String[])
-            if (!project.buildDir.exists()) {
-                project.buildDir.mkdirs()
+        for (entry in pods) {
+            String podName = entry.key
+            def port = entry.value
+            if (port instanceof Collection) {
+                port.each { p ->
+                    portForwardDo(podName, p, pidFile)
+                }
+            } else {
+                portForwardDo(podName, port, pidFile)
             }
-            File outFile = new File(project.buildDir as File, "${podName}.out")
-            processBuilder.redirectOutput(ProcessBuilder.Redirect.appendTo(outFile)).redirectErrorStream(true)
-            def portForwardProcess = processBuilder.start()
-            pidFile.append(portForwardProcess.toHandle().pid() + "\n")
-            println("Started port-forward for $podName $forward")
         }
+    }
+
+    def portForwardDo(String podName, int port, File pidFile) {
+        def forward = "$port:$port"
+        def pfCommand = ["kubectl", "-n", namespace, "port-forward", podName, forward]
+        def processBuilder = new ProcessBuilder(pfCommand as String[])
+        if (!project.buildDir.exists()) {
+            project.buildDir.mkdirs()
+        }
+        File outFile = new File(project.buildDir as File, "${podName}.out")
+        processBuilder.redirectOutput(ProcessBuilder.Redirect.appendTo(outFile)).redirectErrorStream(true)
+        def portForwardProcess = processBuilder.start()
+        pidFile.append(portForwardProcess.toHandle().pid() + "\n")
+        println("Started port-forward for $podName $forward")
     }
 }
 
