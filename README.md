@@ -220,13 +220,14 @@ The `portForward` task is configured in the `build.gradle` file:
 
 ```groovy
 portForward {
-    names["minio"] = 9000
-    names["mstc-work-queue"] = 5672
+    names["minio"] = [9000, 9001]
+    names["mstc-work-queue"] = [5672, 15672]
+    names["mstc-cloud-worker"] = 8080
     namespace = "mstc-dev"
 }
 ```
 
-This tells `portForward` to look for pods that have names that start with `minio` and `mstc-work-queue`, and map the ports respectively.
+This tells `portForward` to look for pods that have names that start with `minio`, `mstc-work-queue` and `mstc-cloud-worker`, and map the ports respectively. Note that if there is more than one port you need to
 
 The `portForwardStop` task looks for a file that contains the pids of the `kubectl` processes that `portForward` task created, and kills those processes.
 
@@ -237,7 +238,7 @@ The Python client is a test case. Just run `pytest`. However, you first need to 
 2. Run `poetry shell`
 3. Run `make dist`. This will create a Docker image containing the `mstc_cloud_worker/main.py` file. That simple app grabs environment variables, logs some messages, sleeps for 5 seconds and returns.
 
-Simpler way is to run `./gw pytest`
+Simpler way is to run `./gw pytest`. This also buiulds the docker image.
 
 Before running `pytest` it is helpful to get a new terminal and follow the logs of the `mstc-cloud-worker`:
 
