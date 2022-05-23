@@ -81,12 +81,13 @@ public class DataService {
         List<String> items = new ArrayList<>();
         for (File file : files) {
             String objectName = prefix == null ? file.getName() : prefix + "-" + file.getName();
+            LOGGER.info("Uploading " + objectName + " to bucket " + bucket);
             minioClient.uploadObject(UploadObjectArgs.builder()
                                                      .bucket(bucket)
                                                      .object(objectName)
                                                      .filename(file.getPath())
                                                      .build());
-            items.add(endpoint + "/" + bucket + "/" + file.getName());
+            items.add(endpoint + "/" + bucket + "/" + objectName);
         }
         return items;
     }
