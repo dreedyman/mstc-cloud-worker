@@ -8,12 +8,20 @@ def client():
     work_queue = 'mstc.queue.work'
     return Client('localhost', exchange, work_queue)
 
+
 @pytest.fixture(scope="session")
 def data():
     from mstc_cloud_worker import Data
     return Data("localhost", 9000, "minioadmin", "minioadmin")
 
-        
+
+@pytest.fixture
+def prefix():
+    import calendar
+    import time
+    return str(calendar.timegm(time.gmtime()))
+
+
 @pytest.fixture
 def inputs():
     from pathlib import Path    
@@ -40,7 +48,7 @@ def astros():
     images_out = images.stdout.read().decode("utf-8")
     have_astros = False
     for line in images_out.split("\n"):
-        if "astros-eap-12.5" in line and "0.3.0" in line:
+        if "astros-eap-12.5" in line and "0.4.0" in line:
             have_astros = True
             break   
     if not have_astros:         
