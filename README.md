@@ -30,12 +30,13 @@ The `cloud-worker` is a Spring Boot service, and also uses the [Fabric8's Java K
 1. Consumes work
 2. Unwraps request, obtains the `image` to run, a name for the `job`, an optional `timeout` (defaults to 15 minutes), the `input bucket` and optional `output bucket`. 
 3. These values are then configured into a Kubernetes Job. The `input bucket` and optional `output bucket` are set as values for environment variables `INPUT_BUCKET` and `OUTPUT_BUCKET` respectively.
+4. If a `prefix` is provided, set the `FILE_PREFIX` environment variable.
 4. The Job is submitted and observed. NOTE: The Job is configured to use `IfNotPresent`for the image pull policy.
 5. Once complete, the `cloud-worker` captures the job's log file, and writes it to the `output bucket`.
 
 **K8S Job**
 
-1. Is expected to download all files in the `input bucket`
+1. Is expected to download all files in the `input bucket`. If the `FILE_PREFIX` is set, download all files using it.
 2. Do it's thing, and
 3. Uploads the files it produces as outputs to the `output bucket`. Once the client receives notification, it can then go pick up all files. NOTE: Should be noted that the `MINIO_SERVICE_HOST` and `MINIO_SERVICE_PORT` environment variables will have been set into the environment of the K8s job as well.
 
@@ -291,6 +292,7 @@ The client submits the following data (as JSON):
 {"image": "mstc/python-test:latest",
  "jobName": "test-job",
  "inputBucket" : "in.bucket",
+ "prefix": "12345678",
 } 
 ```
 
@@ -302,6 +304,7 @@ Optionally you can submit:
  "jobName": "test-job",
  "inputBucket" : "in.bucket",
  "outputBucket" : "out.bucket",
+ "prefix": "12345678",
 } 
 ```
 
@@ -338,6 +341,7 @@ There is a fixture in `conftest.py` that checks if this specific image exists be
  "jobName": "astros-job",
  "inputBucket" : "astros.inputs",
  "outputBucket" : "astros.outputs"
+ "prefix": "12345678"
 }
 ```
 
