@@ -24,14 +24,14 @@ class Data:
         return f"http://{self._host}:{self._port}"
         
         
-    def download(self, bucket, to):
+    def download(self, bucket, prefix, to):
         import os
         
         if not os.path.exists(to):
             os.makedirs(to)
             print("Created " + to)
         items = []
-        for item in self._client.list_objects(bucket,recursive=True):
+        for item in self._client.list_objects(bucket, prefix=str(prefix)):
             name = item.object_name
             file_name = os.path.join(to, name)
             self._client.fget_object(bucket, item.object_name, file_name)
@@ -39,13 +39,12 @@ class Data:
         return items        
         
         
-    def upload(self, bucket, files):
+    def upload(self, bucket, files, prefix):
         import os
         self.bucket(bucket)        
-        #urls = []
         items = []
         for file in files:
-            name = os.path.basename(file)
+            name = str(prefix) + "-" + os.path.basename(file)
             self.client.fput_object(bucket, name, file)
             items.append(name)
         return items
@@ -53,6 +52,6 @@ class Data:
     
     def delete(self, bucket):
         if self._client.bucket_exists(bucket):
-            for item in self._client.list_objects(bucket,recursive=True):
+            for item in self._client.list_objects(bucket, recursive=True):
                 name = item.object_name
                 self._client.remove_object(bucket, item.object_name)
