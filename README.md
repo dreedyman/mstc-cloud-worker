@@ -10,6 +10,7 @@ This document is organized as follows:
 * [Running the Python Client](#running-the-python-client)
 * [Running ASTROS](#running-astros)
 * [Running Cloud Worker Tests](#running-cloud-worker-tests)
+* [Spring Boot Actuator](#spring-boot-actuator)
 * [Gradle Tasks](#gradle-tasks)
 
 
@@ -311,13 +312,13 @@ NOTE: Going forward, the image name may also include a registry hostname.
 
 There is also the `pytest` task (`gw pytest`). This task runs `pytest`, and can be configured to automatically have the docker image built, the system deployed, and have the ports forwarded for you. To do this, uncomment out the following line (in the `task pytest` declaration:
 
-```groovy
+```
 //dependsOn makePythonDist, helmInstall, portForward
 ```
 
 If you want the terminate the system after this task runs, uncooment this line:
 
-```groovy
+```
 //finalizedBy helmUninstall
 ```
 
@@ -364,6 +365,99 @@ Additionally, the `test` task is `finalizedBy` the `helmUninstall` and `portForw
 finalizedBy helmUninstall
 ```
 
+## Spring Boot Actuator
+From [this page](https://github.com/spring-projects/spring-boot/tree/v2.7.0/spring-boot-project/spring-boot-actuator):
+
+Spring Boot Actuator includes a number of additional features to help you monitor and manage your application when it’s pushed to production. You can choose to manage and monitor your application using HTTP or JMX endpoints. Auditing, health and metrics gathering can be automatically applied to your application. The [user guide](https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#production-ready) covers the features in more detail.
+
+To access the actuator the `8080` port needs to be accessible. Runnning the `portForward` task does that, or you can run `kubectl port-forward` manually.
+
+An example of getting all metrics available follows:
+
+
+`curl http://localhost:8080/actuator/metrics | jq` 
+
+```json
+{
+  "names": [
+    "application.ready.time",
+    "application.started.time",
+    "disk.free",
+    "disk.total",
+    "executor.active",
+    "executor.completed",
+    "executor.pool.core",
+    "executor.pool.max",
+    "executor.pool.size",
+    "executor.queue.remaining",
+    "executor.queued",
+    "http.server.requests",
+    "jvm.buffer.count",
+    "jvm.buffer.memory.used",
+    "jvm.buffer.total.capacity",
+    "jvm.classes.loaded",
+    "jvm.classes.unloaded",
+    "jvm.gc.live.data.size",
+    "jvm.gc.max.data.size",
+    "jvm.gc.memory.allocated",
+    "jvm.gc.memory.promoted",
+    "jvm.gc.overhead",
+    "jvm.gc.pause",
+    "jvm.memory.committed",
+    "jvm.memory.max",
+    "jvm.memory.usage.after.gc",
+    "jvm.memory.used",
+    "jvm.threads.daemon",
+    "jvm.threads.live",
+    "jvm.threads.peak",
+    "jvm.threads.states",
+    "logback.events",
+    "process.cpu.usage",
+    "process.files.max",
+    "process.files.open",
+    "process.start.time",
+    "process.uptime",
+    "rabbitmq.acknowledged",
+    "rabbitmq.acknowledged_published",
+    "rabbitmq.channels",
+    "rabbitmq.connections",
+    "rabbitmq.consumed",
+    "rabbitmq.failed_to_publish",
+    "rabbitmq.not_acknowledged_published",
+    "rabbitmq.published",
+    "rabbitmq.rejected",
+    "rabbitmq.unrouted_published",
+    "spring.rabbitmq.listener",
+    "system.cpu.count",
+    "system.cpu.usage",
+    "system.load.average.1m",
+    "tomcat.sessions.active.current",
+    "tomcat.sessions.active.max",
+    "tomcat.sessions.alive.max",
+    "tomcat.sessions.created",
+    "tomcat.sessions.expired",
+    "tomcat.sessions.rejected"
+  ]
+}
+```
+
+Getting the numbver of cpus:
+
+`curl http://localhost:8080/actuator/metrics/system.cpu.count | jq`
+
+```json
+{
+  "name": "system.cpu.count",
+  "description": "The number of processors available to the Java virtual machine",
+  "measurements": [
+    {
+      "statistic": "VALUE",
+      "value": 3
+    }
+  ],
+  "availableTags": []
+}
+```
 ## Gradle Tasks
 You can get the tasks for the project by running
 `gw tasks --all`
