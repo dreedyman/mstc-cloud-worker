@@ -3,7 +3,7 @@ from pathlib import Path
 import os
 
 
-def test_send(client, data, inputs, prefix, cleanup, request):
+def test_send(client, data, inputs, prefix, request):
     request.node.resourceId = "test.inputs"
     print("Upload...")
     items = data.upload("test.inputs", inputs, prefix)
@@ -30,12 +30,12 @@ def test_send(client, data, inputs, prefix, cleanup, request):
     assert succeeded(job_unique_name, files_dir, "SUCCESS")
 
 def test_astros(client, data, inputs, astros, prefix):
-    items = data.upload("astros.inputs", inputs, prefix)
+    items = data.upload("test.inputs", inputs, prefix)
     assert items is not None
     assert len(items) == 2
     job_request = {"image": "mstc/astros-eap-12.5:0.4.0",
                    "jobName": "astros-job",
-                   "inputBucket" : "astros.inputs",
+                   "inputBucket" : "test.inputs",
                    "outputBucket" : "astros.outputs",
                    "prefix": prefix,
                    }    
