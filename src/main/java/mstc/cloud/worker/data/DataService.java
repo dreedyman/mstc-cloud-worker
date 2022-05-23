@@ -72,13 +72,18 @@ public class DataService {
     }
 
     public List<String> upload(String bucket, File... files) throws Exception {
+        return upload(bucket, null, files);
+    }
+
+    public List<String> upload(String bucket, String prefix, File... files) throws Exception {
         getMinioClient();
         bucket(bucket);
         List<String> items = new ArrayList<>();
         for (File file : files) {
+            String objectName = prefix == null ? file.getName() : prefix + "-" + file.getName();
             minioClient.uploadObject(UploadObjectArgs.builder()
                                                      .bucket(bucket)
-                                                     .object(file.getName())
+                                                     .object(objectName)
                                                      .filename(file.getPath())
                                                      .build());
             items.add(endpoint + "/" + bucket + "/" + file.getName());

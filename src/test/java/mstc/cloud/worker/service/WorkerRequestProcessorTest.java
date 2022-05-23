@@ -59,7 +59,8 @@ public class WorkerRequestProcessorTest {
                               "test",
                               0,
                               IN_BUCKET,
-                              OUT_BUCKET);
+                              OUT_BUCKET,
+                              Integer.toString("test".hashCode()));
         String downloadDirName = System.getProperty("test.download.dir");
         downloadDir = new File(downloadDirName,
                                WorkerRequestProcessorTest.class.getSimpleName().toLowerCase());
@@ -137,7 +138,7 @@ public class WorkerRequestProcessorTest {
               .andReturn(200, "Job complete.")
               .always();
         KubernetesClient client = server.getClient();
-        String output = sut.processJob(k8sJob, client, request.getOutputBucket());
+        String output = sut.processJob(k8sJob, client, request.getOutputBucket(), request.getPrefix());
         assertNotNull(output);
         assertEquals("Job complete.", output);
 

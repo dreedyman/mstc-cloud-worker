@@ -55,22 +55,22 @@ public class WorkerRequestProcessor {
 
     public String processRequest(Request request) {
         K8sJob k8sJob = createJob(request);
-        processJob(k8sJob, null, request.getOutputBucket());
+        processJob(k8sJob, null, request.getOutputBucket(), request.getPrefix());
         return "Job " + k8sJob.getJobNameUnique() + " complete.";
     }
 
-    String processJob(K8sJob k8sJob, KubernetesClient client, String bucket) {
+    String processJob(K8sJob k8sJob, KubernetesClient client, String bucket, String prefix) {
         jobRunner.setClient(client);
         logger.info("Submitting job: " + k8sJob.getJobNameUnique());
         String output = jobRunner.submit(k8sJob);
         if (logger.isDebugEnabled()) {
             logger.debug("Result:\n" + output);
         }
-        writeLogAndSend(output, k8sJob.getJobNameUnique() + ".log", bucket);
+        writeLogAndSend(output, k8sJob.getJobNameUnique() + ".log", bucket, prefix);
         return output;
     }
 
-    private void writeLogAndSend(String content, String name, String bucket)  {
+    private void writeLogAndSend(String content, String name, String bucket, String prefix)  {
         String tmpDir = System.getenv("SCRATCH_DIR") == null ?
                 System.getProperty("java.io.tmpdir") :
                 System.getenv("SCRATCH_DIR");
@@ -78,7 +78,7 @@ public class WorkerRequestProcessor {
         File log = new File(tmpDir, name);
         try {
             Files.write(log.toPath(), content.getBytes(StandardCharsets.UTF_8));
-            dataService.upload(bucket, log);
+            dataService.upload(bucket, prefix, log);
         } catch (Exception e) {
             logger.warn("Problem writing or sending log file", e);
         } finally {
@@ -91,6 +91,9 @@ public class WorkerRequestProcessor {
         env.put("MSTC_JOB", "true");
         env.put("INPUT_BUCKET", request.getInputBucket());
         env.put("OUTPUT_BUCKET", request.getOutputBucket());
+        if (request.getPrefix() != null) {
+            env.put("FILE_PREFIX", request.getPrefix());
+        }
         int timeOut = request.getTimeOut() == 0 ? K8sJob.DEFAULT_TIMEOUT_MINUTES : request.getTimeOut();
         return K8sJob.builder()
                      .jobName(request.getJobName())

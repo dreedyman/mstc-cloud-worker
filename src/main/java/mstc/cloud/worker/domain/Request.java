@@ -31,17 +31,20 @@ public class Request {
     private int timeOut;
     private String inputBucket;
     private String outputBucket;
+    private String prefix;
 
     public Request(String image,
                    String jobName,
                    int timeOut,
                    String inputBucket,
-                   String outputBucket) {
+                   String outputBucket,
+                   String prefix) {
         this.image = image;
         this.jobName = jobName;
         this.timeOut = timeOut;
         this.inputBucket = inputBucket;
         this.outputBucket = outputBucket;
+        this.prefix = prefix;
     }
 
     public Request image(String image) {

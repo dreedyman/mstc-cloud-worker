@@ -54,7 +54,8 @@ public class WorkerRequestProcessorTest2 {
                               "test",
                               0,
                               IN_BUCKET,
-                              OUT_BUCKET);
+                              OUT_BUCKET,
+                              Integer.toString("test".hashCode()));
         String downloadDirName = System.getProperty("test.download.dir");
         downloadDir = new File(downloadDirName,
                                WorkerRequestProcessorTest2.class.getSimpleName().toLowerCase());

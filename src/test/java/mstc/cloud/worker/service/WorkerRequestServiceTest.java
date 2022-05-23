@@ -65,6 +65,7 @@ public class WorkerRequestServiceTest {
         MockitoAnnotations.openMocks(this);
         when(workerRequestProcessor.processJob(any(K8sJob.class),
                                                any(KubernetesClient.class),
+                                               any(String.class),
                                                any(String.class)))
                 .thenReturn("Job Completed");
     }
@@ -76,7 +77,8 @@ public class WorkerRequestServiceTest {
                                       "test-job",
                                       5,
                                       IN_BUCKET,
-                                      OUT_BUCKET);
+                                      OUT_BUCKET,
+                                      Integer.toString( "test-job".hashCode()));
         String output = sut.receiveMessage(createMessage(request));
         assertNotNull(output);
     }
