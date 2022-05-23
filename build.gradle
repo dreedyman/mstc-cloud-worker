@@ -120,11 +120,12 @@ task makePythonDist(type: Exec) {
     workingDir new File(project.projectDir, "src/test/python/mstc-cloud-worker")
 }
 
-task pytest(type: Exec, dependsOn: [makePythonDist, helmInstall, portForward]) {
+task pytest(type: Exec) {
+    //dependsOn makePythonDist, helmInstall, portForward
     description = "Runs pytest for the Python test client"
     commandLine = ["poetry", "run", "pytest"]
     workingDir new File(project.projectDir, "src/test/python/mstc-cloud-worker")
-    finalizedBy portForwardStop
+    //finalizedBy helmUninstall
 }
 
 sourceCompatibility = JavaVersion.VERSION_11
