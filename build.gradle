@@ -84,8 +84,9 @@ task helmUninstall(dependsOn: portForwardStop) {
 }
 
 portForward {
-    names.put("minio", 9000)
-    names.put("mstc-work-queue", 5672)
+    names["minio"] = [9000, 9001]
+    names["mstc-work-queue"] = [5672, 15672]
+    names["mstc-cloud-worker"] = 8080
     namespace = "mstc-dev"
 }
 //portForward.dependsOn helmInstall
