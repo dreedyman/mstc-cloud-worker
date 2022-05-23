@@ -229,18 +229,20 @@ portForward {
 
 This tells `portForward` to look for pods that have names that start with `minio`, `mstc-work-queue` and `mstc-cloud-worker`, and map the ports respectively. Note that if there is more than one port you need to use an array `[]`.
 
+Also, the `namespace` item is optional. If not defined it defaults to `mstc-dev`. It's included here for completeness.
+
 The `portForwardStop` task looks for a file that contains the pids of the `kubectl` processes that `portForward` task created, and kills those processes.
 
 ## Running the Python Client
-The Python client is a test case. Just run `pytest`. However, you first need to build the test Docker image. You can do that in one of two ways:
+The Python client is a test case. You first need to build the test Docker image. You can do that in one of two ways:
 
 1. cd to the `src/test/python/mstc-cloud-worker` directory
 2. Run `poetry shell`
 3. Run `make dist`. This will create a Docker image containing the `mstc_cloud_worker/main.py` file. That simple app grabs environment variables, logs some messages, sleeps for 5 seconds and returns.
 
-Simpler way is to run `./gw pytest`. This also buiulds the docker image.
+Or, the simpler way is to run `gw makePythonDist` (or `gw mPD`). Also remember to run the `helmInstall` and `portForward` tasks before hand, or use `helm install` and `kubectl port-forward` commands accordingly.
 
-Before running `pytest` it is helpful to get a new terminal and follow the logs of the `mstc-cloud-worker`:
+Before running `pytest` you may want to get a new terminal and follow the logs of the `mstc-cloud-worker`:
 
 `kubectl logs -n mstc-dev mstc-cloud-worker-6ff966fdf9-b27ml --follow`
 
@@ -307,6 +309,20 @@ Optionally you can submit:
 
 NOTE: Going forward, the image name may also include a registry hostname.
 
+There is also the `pytest` task (`gw pytest`). This task runs `pytest`, and can be configured to automatically have the docker image built, the system deployed, and have the ports forwarded for you. To do this, uncomment out the following line (in the `task pytest` declaration:
+
+```groovy
+//dependsOn makePythonDist, helmInstall, portForward
+```
+
+If you want the terminate the system after this task runs, uncooment this line:
+
+```groovy
+//finalizedBy helmUninstall
+```
+
+
+
 ## Running ASTROS
 There is a test case included in the project that will run ASTROS. However, you'll need to build the Docker image for ASTROS from the `mstc-astros-eap` project, using rthe `job` branch. Once you've built the image in the `mstc-astros-eap` project using `make dist`, you'll see the following after you run `docker images`
 
@@ -331,7 +347,22 @@ Once complete the output bucket contains 2 files:
 
 
 ## Running Cloud Worker Tests
-TODO
+The project's tests can be run by running `gw test`. The `test` task executes all of the unit tests in the project. By default, the `test` task will auto-detect all tests in the project, compile them, and then execute them. In the end, it generates a report of which tests have passed and failed.
+
+You can open the report as foillows:
+
+`open build/reports/tests/test/index.html`
+
+In this project, the `test` task `dependsOn` the `helmInstall` and `portForward` tasks. This means that by running `gw test`, you'll automatically have the system deployed, and have the ports forwarded for you. You do not need to run `helmInstall` and `portForward` separately. If you want to, comment out the following line:
+
+```groovy
+dependsOn helmInstall, portForward
+```
+Additionally, the `test` task is `finalizedBy` the `helmUninstall` and `portForwardStop` tasks. If you want to change that behavior, comment out the following line:
+
+```groovy
+finalizedBy helmUninstall
+```
 
 ## Gradle Tasks
 You can get the tasks for the project by running
