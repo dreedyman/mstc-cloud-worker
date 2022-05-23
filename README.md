@@ -40,7 +40,7 @@ The `cloud-worker` is a Spring Boot service, and also uses the [Fabric8's Java K
 
 The Kubernetes Job is configured for automatic cleanup after it is finished as described [here](https://kubernetes.io/docs/concepts/workloads/controllers/ttlafterfinished/). The TTL (time to live) mechanism is set for 30 seconds.
 
-###Dependencies
+### Dependencies
 For the Java project:
 
 * [Lombok](https://projectlombok.org/) is used to generate getters, setters, constructors and builder capabilities for some classes.
@@ -227,7 +227,7 @@ portForward {
 }
 ```
 
-This tells `portForward` to look for pods that have names that start with `minio`, `mstc-work-queue` and `mstc-cloud-worker`, and map the ports respectively. Note that if there is more than one port you need to
+This tells `portForward` to look for pods that have names that start with `minio`, `mstc-work-queue` and `mstc-cloud-worker`, and map the ports respectively. Note that if there is more than one port you need to use an array `[]`.
 
 The `portForwardStop` task looks for a file that contains the pids of the `kubectl` processes that `portForward` task created, and kills those processes.
 
